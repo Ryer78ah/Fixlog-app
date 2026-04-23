@@ -738,22 +738,39 @@ function toggleDictate(){
 function startDictate(){
   var ta = document.getElementById('issueDesc');
 
-  // Detect environment
-  var isCapacitor = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+  // Detect Capacitor native environment
+  // Check multiple ways because isNativePlatform() may not exist in all versions
+  var isCapacitor = !!(
+    (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) ||
+    (window.Capacitor && window.Capacitor.platform && window.Capacitor.platform !== 'web') ||
+    (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.SpeechRecognition)
+  );
   var isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+  // Show what environment we detected (helps debug)
+  console.log('[FixLog] isCapacitor:', isCapacitor, 'isMobile:', isMobile,
+    'Capacitor:', !!window.Capacitor,
+    'SR plugin:', !!(window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.SpeechRecognition)
+  );
 
   if(isCapacitor){
     // ── NATIVE APK: Use Capacitor SpeechRecognition plugin ────────────────
+    // CRITICAL: set isListening=true BEFORE calling startCapacitorSR
+    // otherwise _doCapacitorSR returns immediately thinking user cancelled
+    isListening = true;
+    document.getElementById('dictateBtn').classList.add('active');
+    document.getElementById('dictateBtnLabel').textContent = 'Starting…';
+    setStatus('Requesting mic…', 'recording');
     startCapacitorSR(ta);
   } else if(isMobile){
-    // ── MOBILE BROWSER/PWA: Use keyboard mic (browser SR blocked on Android)
+    // ── MOBILE BROWSER/PWA: keyboard mic ──────────────────────────────────
     ta.focus();
     setTimeout(function(){
       ta.scrollIntoView({behavior:'smooth', block:'center'});
     }, 300);
     showMobileVoiceGuide();
   } else {
-    // ── DESKTOP BROWSER: webkitSpeechRecognition works fine ───────────────
+    // ── DESKTOP BROWSER: webkitSpeechRecognition ──────────────────────────
     var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if(!SR){
       ta.focus();
@@ -793,74 +810,89 @@ function startCapacitorSR(ta){
 }
 
 function _doCapacitorSR(SR, ta){
-  if(!isListening) return; // user tapped stop while we were cleaning up
+  // Guard: user tapped stop
+  if(!isListening) return;
 
   var accumulated = ta.value;
 
-  // Remove old listeners first
+  // Remove old listener
   if(window._srPartialListener){
     try{ window._srPartialListener.remove(); }catch(e){}
     window._srPartialListener = null;
   }
 
+  console.log('[FixLog] Requesting permission...');
+  setStatus('Checking mic permission…','recording');
+
   SR.requestPermission().then(function(result){
-    var granted = result.permission === 'granted'
-               || result.permission === true
-               || result.permission === 1;
+    console.log('[FixLog] Permission result:', JSON.stringify(result));
+
+    // Handle all possible result shapes from different plugin versions
+    var perm = result && (result.permission || result.status || result);
+    var granted = perm === 'granted' || perm === true || perm === 1 || perm === 'authorized';
+
+    console.log('[FixLog] Granted:', granted, 'raw perm:', perm);
+
     if(!granted){
       isListening = false;
       document.getElementById('dictateBtn').classList.remove('active');
       document.getElementById('dictateBtnLabel').textContent = '🎤 Tap to Speak';
-      setStatus('Mic permission denied — check Settings','');
+      setStatus('Mic permission denied — open phone Settings and allow mic for this app','');
       showMicDeniedGuide();
       return;
     }
 
-    document.getElementById('dictateBtn').classList.add('active');
     document.getElementById('dictateBtnLabel').textContent = 'Listening… tap to stop';
     setStatus('🔴 Listening — speak now','recording');
 
-    // Attach partial results listener
+    // Partial results listener
     SR.addListener('partialResults', function(data){
       if(!isListening) return;
-      if(data && data.matches && data.matches.length > 0){
-        ta.value = (accumulated + data.matches[0]).trimStart();
+      console.log('[FixLog] Partial:', JSON.stringify(data));
+      var matches = data && (data.matches || data.value || []);
+      if(matches && matches.length > 0){
+        ta.value = (accumulated + matches[0]).trimStart();
         ta.style.height = 'auto';
         ta.style.height = Math.min(ta.scrollHeight, 280) + 'px';
       }
-    }).then(function(h){ window._srPartialListener = h; }).catch(function(){});
+    }).then(function(h){
+      window._srPartialListener = h;
+      console.log('[FixLog] Partial listener attached');
+    }).catch(function(e){ console.warn('[FixLog] Listener error:', e); });
 
-    // Start — resolves with final result when utterance ends
+    console.log('[FixLog] Calling SR.start()...');
     SR.start({
       language: 'en-US',
       maxResults: 1,
       partialResults: true,
       popup: false
     }).then(function(finalResult){
-      if(finalResult && finalResult.matches && finalResult.matches.length > 0){
-        accumulated = (accumulated + finalResult.matches[0] + ' ').trimStart();
+      console.log('[FixLog] SR.start() resolved:', JSON.stringify(finalResult));
+      var matches = finalResult && (finalResult.matches || finalResult.value || []);
+      if(matches && matches.length > 0 && matches[0]){
+        accumulated = (accumulated + matches[0] + ' ').trimStart();
         ta.value = accumulated;
         ta.style.height = 'auto';
         ta.style.height = Math.min(ta.scrollHeight, 280) + 'px';
       }
-      // Auto-restart for continuous listening
       if(isListening){
         setStatus('🟡 Keep speaking…','recording');
         setTimeout(function(){
           if(isListening) _doCapacitorSR(SR, ta);
-        }, 200);
+        }, 300);
       }
     }).catch(function(err){
-      console.warn('SR error:', err);
+      console.warn('[FixLog] SR.start() error:', err, JSON.stringify(err));
       if(isListening){
+        setStatus('Mic error — retrying…','recording');
         setTimeout(function(){
           if(isListening) _doCapacitorSR(SR, ta);
-        }, 600);
+        }, 800);
       }
     });
 
   }).catch(function(err){
-    console.warn('Permission error:', err);
+    console.warn('[FixLog] requestPermission error:', err);
     isListening = false;
     document.getElementById('dictateBtn').classList.remove('active');
     document.getElementById('dictateBtnLabel').textContent = '🎤 Tap to Speak';
