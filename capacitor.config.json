@@ -1,0 +1,13 @@
+{
+  "appId": "com.nawaz.fixlog",
+  "appName": "FixLog",
+  "webDir": "www",
+  "plugins": {
+    "SpeechRecognition": {
+      "language": "en-US",
+      "maxResults": 1,
+      "partialResults": true,
+      "popup": false
+    }
+  }
+}
