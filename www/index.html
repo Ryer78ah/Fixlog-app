@@ -312,7 +312,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
     <div class="slabel">Describe the issue &amp; fix</div>
     <textarea class="voice-textarea" id="issueDesc" placeholder="Tap the button below and speak…&#10;&#10;e.g. Fixed Ahmed's Outlook, wasn't syncing. Cleared credential manager, working now."></textarea>
     <div class="dictate-wrap">
-      <div class="dictate-btn" id="dictateBtn" onclick="toggleDictate()">
+      <div class="dictate-btn" id="dictateBtn" onclick="toggleDictate();_dbgTap()">
         <svg class="dictate-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
         <span id="dictateBtnLabel">🎤 Tap to Speak</span>
       </div>
@@ -748,10 +748,11 @@ function startDictate(){
   var isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
   // Show what environment we detected (helps debug)
-  console.log('[FixLog] isCapacitor:', isCapacitor, 'isMobile:', isMobile,
-    'Capacitor:', !!window.Capacitor,
-    'SR plugin:', !!(window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.SpeechRecognition)
-  );
+  var _dbgMsg = 'isCapacitor:'+isCapacitor+' isMobile:'+isMobile+
+    ' Cap:'+!!window.Capacitor+
+    ' SR:'+!!(window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.SpeechRecognition)+
+    ' platform:'+(window.Capacitor&&window.Capacitor.platform||'none');
+  _dbgLog(_dbgMsg);
 
   if(isCapacitor){
     // ── NATIVE APK: Use Capacitor SpeechRecognition plugin ────────────────
@@ -821,17 +822,17 @@ function _doCapacitorSR(SR, ta){
     window._srPartialListener = null;
   }
 
-  console.log('[FixLog] Requesting permission...');
+  _dbgLog('Calling requestPermission...');
   setStatus('Checking mic permission…','recording');
 
   SR.requestPermission().then(function(result){
-    console.log('[FixLog] Permission result:', JSON.stringify(result));
+    _dbgLog('Permission result: '+JSON.stringify(result));
 
     // Handle all possible result shapes from different plugin versions
     var perm = result && (result.permission || result.status || result);
     var granted = perm === 'granted' || perm === true || perm === 1 || perm === 'authorized';
 
-    console.log('[FixLog] Granted:', granted, 'raw perm:', perm);
+    _dbgLog('Granted:'+granted+' perm:'+JSON.stringify(perm));
 
     if(!granted){
       isListening = false;
@@ -848,7 +849,7 @@ function _doCapacitorSR(SR, ta){
     // Partial results listener
     SR.addListener('partialResults', function(data){
       if(!isListening) return;
-      console.log('[FixLog] Partial:', JSON.stringify(data));
+      _dbgLog('Partial:'+JSON.stringify(data));
       var matches = data && (data.matches || data.value || []);
       if(matches && matches.length > 0){
         ta.value = (accumulated + matches[0]).trimStart();
@@ -857,17 +858,17 @@ function _doCapacitorSR(SR, ta){
       }
     }).then(function(h){
       window._srPartialListener = h;
-      console.log('[FixLog] Partial listener attached');
+      _dbgLog('Partial listener attached');
     }).catch(function(e){ console.warn('[FixLog] Listener error:', e); });
 
-    console.log('[FixLog] Calling SR.start()...');
+    _dbgLog('Calling SR.start()...');
     SR.start({
       language: 'en-US',
       maxResults: 1,
       partialResults: true,
       popup: false
     }).then(function(finalResult){
-      console.log('[FixLog] SR.start() resolved:', JSON.stringify(finalResult));
+      _dbgLog('SR resolved:'+JSON.stringify(finalResult));
       var matches = finalResult && (finalResult.matches || finalResult.value || []);
       if(matches && matches.length > 0 && matches[0]){
         accumulated = (accumulated + matches[0] + ' ').trimStart();
@@ -882,7 +883,7 @@ function _doCapacitorSR(SR, ta){
         }, 300);
       }
     }).catch(function(err){
-      console.warn('[FixLog] SR.start() error:', err, JSON.stringify(err));
+      _dbgLog('SR error:'+JSON.stringify(err));
       if(isListening){
         setStatus('Mic error — retrying…','recording');
         setTimeout(function(){
@@ -892,7 +893,7 @@ function _doCapacitorSR(SR, ta){
     });
 
   }).catch(function(err){
-    console.warn('[FixLog] requestPermission error:', err);
+    _dbgLog('Permission error:'+JSON.stringify(err));
     isListening = false;
     document.getElementById('dictateBtn').classList.remove('active');
     document.getElementById('dictateBtnLabel').textContent = '🎤 Tap to Speak';
@@ -1071,6 +1072,50 @@ function showMicDeniedGuide(){
 function closeMicGuide(){
   var g = document.getElementById('micGuide');
   if(g) g.remove();
+}
+
+// ── DEBUG OVERLAY (tap mic 5x fast to show) ──────────────
+var _dbgTaps = 0, _dbgTimer = null;
+var _dbgLogs = [];
+
+function _dbgLog(msg){
+  var ts = new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  _dbgLogs.unshift('['+ts+'] '+msg);
+  if(_dbgLogs.length > 30) _dbgLogs.pop();
+  var el = document.getElementById('_dbgContent');
+  if(el) el.textContent = _dbgLogs.join('\n');
+  console.log('[FLdbg]', msg);
+}
+
+function _dbgTap(){
+  _dbgTaps++;
+  clearTimeout(_dbgTimer);
+  _dbgTimer = setTimeout(function(){ _dbgTaps = 0; }, 1500);
+  if(_dbgTaps >= 5){ _dbgTaps = 0; _showDebugOverlay(); }
+}
+
+function closeDebugOverlay(){ var g=document.getElementById('_dbgOverlay'); if(g)g.remove(); }
+
+function _showDebugOverlay(){
+  var ex = document.getElementById('_dbgOverlay');
+  if(ex){ ex.remove(); return; }
+  var o = document.createElement('div');
+  o.id = '_dbgOverlay';
+  o.setAttribute('style',
+    'position:fixed;inset:0;background:rgba(0,0,0,.95);z-index:99999;'+
+    'display:flex;flex-direction:column;padding:16px;'
+  );
+  o.innerHTML =
+    '<div style="display:flex;justify-content:space-between;margin-bottom:10px;">'+
+    '<span style="color:#00e5ff;font-weight:700;font-size:14px;">Debug Log</span>'+
+    '<button onclick="closeDebugOverlay()" '+
+    'style="background:#ef4444;color:#fff;border:none;padding:4px 12px;border-radius:6px;cursor:pointer;">Close</button>'+
+    '</div>'+
+    '<div id="_dbgContent" style="flex:1;overflow-y:auto;font-family:monospace;font-size:11px;'+
+    'color:#00e5ff;white-space:pre-wrap;background:#111;padding:10px;border-radius:8px;line-height:1.6;">'+
+    _dbgLogs.join('\n')+
+    '</div>';
+  document.body.appendChild(o);
 }
 
 function stopDictate(){
