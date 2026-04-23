@@ -42,21 +42,43 @@ jobs:
           sed -i 's|<manifest xmlns:android="http://schemas.android.com/apk/res/android">|<manifest xmlns:android="http://schemas.android.com/apk/res/android">\n\n    <uses-permission android:name="android.permission.RECORD_AUDIO" />\n    <uses-permission android:name="android.permission.INTERNET" />\n    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />|' "$FILE"
           grep "uses-permission" "$FILE"
 
+      - name: Show MainActivity.java before copy
+        run: |
+          echo "=== File from repo ==="
+          cat android_src/MainActivity.java
+          echo "=== Hex dump first 100 bytes ==="
+          xxd android_src/MainActivity.java | head -10
+          DEST=$(find android -name "MainActivity.java" | head -1)
+          echo "=== Original MainActivity ==="
+          cat "$DEST"
+
       - name: Copy MainActivity.java from repo into Android project
         run: |
           DEST=$(find android -name "MainActivity.java" | head -1)
-          echo "Copying to: $DEST"
+          echo "Destination: $DEST"
           cp android_src/MainActivity.java "$DEST"
-          echo "Result:"
+          echo "=== Copied file ==="
           cat "$DEST"
+
+      - name: Show all Java files in project
+        run: |
+          find android -name "*.java" | head -20
+          echo "=== build.gradle app ==="
+          cat android/app/build.gradle
 
       - name: Make gradlew executable
         run: chmod +x android/gradlew
 
-      - name: Build debug APK
+      - name: Build debug APK with full logging
         run: |
           cd android
-          ./gradlew assembleDebug --no-daemon
+          ./gradlew assembleDebug --no-daemon --info 2>&1 | tail -100
+        continue-on-error: true
+
+      - name: Show compiler errors
+        run: |
+          find android -name "*.log" 2>/dev/null | xargs grep -l "error:" 2>/dev/null | head -5 | xargs cat 2>/dev/null || echo "No log files found"
+          find android/app/build -name "*.log" 2>/dev/null | head -10
 
       - name: Verify APK exists
         run: |
@@ -65,7 +87,7 @@ jobs:
             echo "SUCCESS"
             ls -lh "$APK"
           else
-            echo "APK not found"
+            echo "APK not found - build failed"
             exit 1
           fi
 
