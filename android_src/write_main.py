@@ -1,79 +1,91 @@
 import os
 import glob
 
-# Find the destination MainActivity.java
+# Find destination MainActivity.java
 dest_files = glob.glob('android/**/MainActivity.java', recursive=True)
 if not dest_files:
-    print("ERROR: MainActivity.java not found in android folder")
+    print("ERROR: MainActivity.java not found")
     exit(1)
 
 dest = dest_files[0]
-print(f"Writing to: {dest}")
+print(f"Destination: {dest}")
 
-# Try to find the speech recognition plugin Java file
-plugin_java = glob.glob(
-    'node_modules/@capacitor-community/speech-recognition/android/**/*.java',
-    recursive=True
-)
+# Search ALL java files in node_modules for the speech plugin
+all_java = glob.glob('node_modules/@capacitor-community/speech-recognition/**/*.java', recursive=True)
+print(f"All Java files in plugin: {all_java}")
 
-print(f"Found plugin Java files: {plugin_java}")
+# Also check the android folder inside the capacitor project
+synced = glob.glob('android/**/*.java', recursive=True)
+print(f"All Java files in android project: {synced}")
 
-plugin_import = None
-plugin_class = None
+# Find the plugin class - search broadly
+plugin_pkg = None
+plugin_cls = None
 
-for f in plugin_java:
-    content = open(f).read()
-    if 'CapacitorPlugin' in content or 'Plugin' in content:
-        lines = content.split('\n')
-        for line in lines:
+# First check if it got synced into the android project already
+for f in synced:
+    if 'speechrecognition' in f.lower() or 'speech' in f.lower():
+        print(f"Found speech file: {f}")
+        content = open(f).read()
+        print(content[:500])
+        for line in content.split('\n'):
             if line.strip().startswith('package '):
-                pkg = line.strip().replace('package ', '').replace(';', '').strip()
-            if line.strip().startswith('public class') and 'Plugin' in line:
-                cls = line.strip().split()[2]
-                plugin_import = f"{pkg}.{cls}"
-                plugin_class = cls
-                print(f"Found plugin: {plugin_import}")
-                break
-        if plugin_class:
+                plugin_pkg = line.strip().replace('package ','').replace(';','').strip()
+            if 'public class' in line and ('Plugin' in line or 'Recognition' in line):
+                plugin_cls = line.strip().split()[2].split('{')[0].strip()
+        if plugin_pkg and plugin_cls:
+            print(f"Found from synced: {plugin_pkg}.{plugin_cls}")
             break
 
-# Build the MainActivity content
-if plugin_class:
-    content = f"""package com.nawaz.fixlog;
+# If not found in android, check node_modules
+if not plugin_cls:
+    for f in all_java:
+        print(f"Checking: {f}")
+        content = open(f).read()
+        for line in content.split('\n'):
+            if line.strip().startswith('package '):
+                plugin_pkg = line.strip().replace('package ','').replace(';','').strip()
+            if 'public class' in line and ('Plugin' in line or 'Recognition' in line):
+                plugin_cls = line.strip().split()[2].split('{')[0].strip()
+        if plugin_pkg and plugin_cls:
+            print(f"Found from node_modules: {plugin_pkg}.{plugin_cls}")
+            break
 
-import android.os.Bundle;
-import com.getcapacitor.BridgeActivity;
-import {plugin_import};
+print(f"Final: package={plugin_pkg} class={plugin_cls}")
 
-public class MainActivity extends BridgeActivity {{
-    @Override
-    public void onCreate(Bundle savedInstanceState) {{
-        registerPlugin({plugin_class}.class);
-        super.onCreate(savedInstanceState);
-    }}
-}}
-"""
-    print(f"Using plugin class: {plugin_class}")
+if plugin_pkg and plugin_cls:
+    java = (
+        "package com.nawaz.fixlog;\n\n"
+        "import android.os.Bundle;\n"
+        "import com.getcapacitor.BridgeActivity;\n"
+        f"import {plugin_pkg}.{plugin_cls};\n\n"
+        "public class MainActivity extends BridgeActivity {\n"
+        "    @Override\n"
+        "    public void onCreate(Bundle savedInstanceState) {\n"
+        f"        registerPlugin({plugin_cls}.class);\n"
+        "        super.onCreate(savedInstanceState);\n"
+        "    }\n"
+        "}\n"
+    )
 else:
-    # No plugin found - use basic MainActivity (app still works, keyboard mic available)
-    content = """package com.nawaz.fixlog;
+    # Hard fallback with known community plugin path
+    print("Using hardcoded fallback import")
+    java = (
+        "package com.nawaz.fixlog;\n\n"
+        "import android.os.Bundle;\n"
+        "import com.getcapacitor.BridgeActivity;\n"
+        "import com.getcapacitor.community.speechrecognition.SpeechRecognition;\n\n"
+        "public class MainActivity extends BridgeActivity {\n"
+        "    @Override\n"
+        "    public void onCreate(Bundle savedInstanceState) {\n"
+        "        registerPlugin(SpeechRecognition.class);\n"
+        "        super.onCreate(savedInstanceState);\n"
+        "    }\n"
+        "}\n"
+    )
 
-import android.os.Bundle;
-import com.getcapacitor.BridgeActivity;
-
-public class MainActivity extends BridgeActivity {
-    @Override
-    public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-    }
-}
-"""
-    print("WARNING: Plugin class not found, using basic MainActivity")
-
-# Write the file
 with open(dest, 'w') as f:
-    f.write(content)
+    f.write(java)
 
-print("=== Written MainActivity.java ===")
+print("=== MainActivity.java written ===")
 print(open(dest).read())
-print("Done.")
