@@ -42,43 +42,68 @@ jobs:
           sed -i 's|<manifest xmlns:android="http://schemas.android.com/apk/res/android">|<manifest xmlns:android="http://schemas.android.com/apk/res/android">\n\n    <uses-permission android:name="android.permission.RECORD_AUDIO" />\n    <uses-permission android:name="android.permission.INTERNET" />\n    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />|' "$FILE"
           grep "uses-permission" "$FILE"
 
-      - name: Show MainActivity.java before copy
+      - name: Find correct SpeechRecognition class name
         run: |
-          echo "=== File from repo ==="
-          cat android_src/MainActivity.java
-          echo "=== Hex dump first 100 bytes ==="
-          xxd android_src/MainActivity.java | head -10
-          DEST=$(find android -name "MainActivity.java" | head -1)
-          echo "=== Original MainActivity ==="
-          cat "$DEST"
+          echo "=== Searching for SpeechRecognition classes in node_modules ==="
+          find node_modules/@capacitor-community/speech-recognition -name "*.java" 2>/dev/null
+          find node_modules/@capacitor-community/speech-recognition/android -name "*.java" 2>/dev/null | head -20
+          echo "=== Package declarations ==="
+          find node_modules/@capacitor-community/speech-recognition -name "*.java" -exec grep -l "class.*Plugin" {} \; 2>/dev/null
+          find node_modules/@capacitor-community/speech-recognition -name "*.java" -exec grep "^package\|class.*Plugin" {} \; 2>/dev/null
 
-      - name: Copy MainActivity.java from repo into Android project
+      - name: Write correct MainActivity.java
         run: |
           DEST=$(find android -name "MainActivity.java" | head -1)
-          echo "Destination: $DEST"
-          cp android_src/MainActivity.java "$DEST"
-          echo "=== Copied file ==="
-          cat "$DEST"
+          echo "Writing to: $DEST"
+          # Find the actual plugin class name from installed package
+          PLUGIN_FILE=$(find node_modules/@capacitor-community/speech-recognition -name "SpeechRecognition.java" -o -name "SpeechRecognitionPlugin.java" 2>/dev/null | head -1)
+          echo "Found plugin file: $PLUGIN_FILE"
+          if [ -n "$PLUGIN_FILE" ]; then
+            PACKAGE=$(grep "^package" "$PLUGIN_FILE" | sed 's/package //;s/;//')
+            CLASS=$(grep "public class" "$PLUGIN_FILE" | awk '{print $3}')
+            echo "Package: $PACKAGE"
+            echo "Class: $CLASS"
+            cat > "$DEST" << EOF
+package com.nawaz.fixlog;
 
-      - name: Show all Java files in project
-        run: |
-          find android -name "*.java" | head -20
-          echo "=== build.gradle app ==="
-          cat android/app/build.gradle
+import android.os.Bundle;
+import com.getcapacitor.BridgeActivity;
+import ${PACKAGE}.${CLASS};
+
+public class MainActivity extends BridgeActivity {
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        registerPlugin(${CLASS}.class);
+        super.onCreate(savedInstanceState);
+    }
+}
+EOF
+          else
+            echo "Plugin Java file not found, using default MainActivity"
+            cat > "$DEST" << EOF
+package com.nawaz.fixlog;
+
+import android.os.Bundle;
+import com.getcapacitor.BridgeActivity;
+
+public class MainActivity extends BridgeActivity {
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+    }
+}
+EOF
+          fi
+          echo "=== Final MainActivity.java ==="
+          cat "$DEST"
 
       - name: Make gradlew executable
         run: chmod +x android/gradlew
 
-      - name: Build debug APK with full logging
+      - name: Build debug APK
         run: |
           cd android
-          ./gradlew assembleDebug --no-daemon --info 2>&1 | tail -100
-        continue-on-error: true
-
-      - name: Show compiler errors
-        run: |
-          find android -name "*.log" 2>/dev/null | xargs grep -l "error:" 2>/dev/null | head -5 | xargs cat 2>/dev/null || echo "No log files found"
-          find android/app/build -name "*.log" 2>/dev/null | head -10
+          ./gradlew assembleDebug --no-daemon 2>&1
 
       - name: Verify APK exists
         run: |
@@ -87,7 +112,7 @@ jobs:
             echo "SUCCESS"
             ls -lh "$APK"
           else
-            echo "APK not found - build failed"
+            echo "APK not found"
             exit 1
           fi
 
