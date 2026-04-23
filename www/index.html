@@ -733,82 +733,77 @@ function startDictate(){
   }
 }
 
-// ── CAPACITOR NATIVE SPEECH ───────────────────────────────────────────────
-// Uses @capacitor/speech-recognition plugin — full Android native SR
-// Continuous, no keyboard needed, same Google speech engine as Assistant
+// ── CAPACITOR NATIVE SPEECH ─────────────────────────────────────────────────
+// Uses @capacitor-community/speech-recognition
+// API: requestPermission, start({language, maxResults, partialResults, popup})
+// Events: partialResults → {matches:[]}
 function startCapacitorSR(ta){
   var SR = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.SpeechRecognition;
   if(!SR){
-    // Fallback if plugin not loaded yet
     setStatus('Loading speech engine…','');
-    setTimeout(function(){ startCapacitorSR(ta); }, 500);
+    setTimeout(function(){ startCapacitorSR(ta); }, 800);
     return;
   }
 
-  isListening = true;
-  document.getElementById('dictateBtn').classList.add('active');
-  document.getElementById('dictateBtnLabel').textContent = 'Listening… tap to stop';
-  setStatus('🔴 Listening — speak now','recording');
-
   var accumulated = ta.value;
 
-  // Request permission first
+  // Step 1: Check / request permission
   SR.requestPermission().then(function(result){
-    if(result.permission !== 'granted'){
+    // result.permission = 'granted' | 'denied' | 'prompt'
+    var granted = result.permission === 'granted' || result.permission === true;
+    if(!granted){
       isListening = false;
       document.getElementById('dictateBtn').classList.remove('active');
       document.getElementById('dictateBtnLabel').textContent = 'Tap to Speak';
-      setStatus('Mic permission denied — check phone Settings','');
+      setStatus('Mic permission denied — check Settings','');
       showMicDeniedGuide();
       return;
     }
 
-    // Start listening
+    isListening = true;
+    document.getElementById('dictateBtn').classList.add('active');
+    document.getElementById('dictateBtnLabel').textContent = 'Listening… tap to stop';
+    setStatus('🔴 Listening — speak now','recording');
+
+    // Step 2: Listen for partial results
+    if(window._srPartialListener){ try{window._srPartialListener.remove();}catch(e){} }
+    SR.addListener('partialResults', function(data){
+      if(!isListening) return;
+      if(data && data.matches && data.matches.length > 0){
+        ta.value = (accumulated + data.matches[0]).trimStart();
+        ta.style.height = 'auto';
+        ta.style.height = Math.min(ta.scrollHeight, 280) + 'px';
+      }
+    }).then(function(h){ window._srPartialListener = h; });
+
+    // Step 3: Start recognition
     SR.start({
       language: 'en-US',
       maxResults: 1,
       partialResults: true,
       popup: false
-    }).catch(function(e){
-      setStatus('Could not start mic — try again','');
-      isListening = false;
-      document.getElementById('dictateBtn').classList.remove('active');
-      document.getElementById('dictateBtnLabel').textContent = 'Tap to Speak';
-    });
-
-    // Listen for partial results (words as you speak)
-    if(window._srPartialListener) window._srPartialListener.remove();
-    window._srPartialListener = SR.addListener('partialResults', function(data){
-      if(data && data.matches && data.matches[0]){
-        ta.value = (accumulated + data.matches[0]).trimStart();
-        ta.style.height = 'auto';
-        ta.style.height = Math.min(ta.scrollHeight, 280) + 'px';
+    }).then(function(finalResult){
+      // start() resolves with final result when speech ends
+      if(finalResult && finalResult.matches && finalResult.matches.length > 0){
+        accumulated = (accumulated + finalResult.matches[0] + ' ').trimStart();
+        ta.value = accumulated;
+      }
+      // Auto restart if still listening
+      if(isListening){
+        setTimeout(function(){ startCapacitorSR(ta); }, 300);
+      }
+    }).catch(function(err){
+      console.warn('SR start error:', err);
+      if(isListening){
+        // Retry once
+        setTimeout(function(){
+          if(isListening) startCapacitorSR(ta);
+        }, 500);
       }
     });
 
-    // Listen for final result
-    if(window._srFinalListener) window._srFinalListener.remove();
-    window._srFinalListener = SR.addListener('listeningState', function(data){
-      if(data.status === 'stopped' && isListening){
-        // Android stopped SR (silence/timeout) — get final text and restart
-        SR.stop().then(function(result){
-          if(result && result.matches && result.matches[0]){
-            accumulated = (accumulated + result.matches[0] + ' ').trimStart();
-            ta.value = accumulated;
-          }
-          // Restart after short pause
-          setTimeout(function(){
-            if(isListening) startCapacitorSR(ta);
-          }, 400);
-        }).catch(function(){
-          if(isListening){
-            setTimeout(function(){ startCapacitorSR(ta); }, 400);
-          }
-        });
-      }
-    });
-
-  }).catch(function(e){
+  }).catch(function(err){
+    console.warn('Permission error:', err);
     isListening = false;
     document.getElementById('dictateBtn').classList.remove('active');
     document.getElementById('dictateBtnLabel').textContent = 'Tap to Speak';
@@ -943,6 +938,8 @@ function showMobileVoiceGuide(){
     '</div>';
   document.body.appendChild(g);
 }
+
+function closeWhisperGuide(){ var g=document.getElementById('whisperGuide'); if(g)g.remove(); }
 
 function closeMobileVoiceGuide(){
   localStorage.setItem('fl_voice_guide_seen','1');
