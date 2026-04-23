@@ -40,15 +40,22 @@ jobs:
         run: |
           FILE="android/app/src/main/AndroidManifest.xml"
           sed -i 's|<manifest xmlns:android="http://schemas.android.com/apk/res/android">|<manifest xmlns:android="http://schemas.android.com/apk/res/android">\n\n    <uses-permission android:name="android.permission.RECORD_AUDIO" />\n    <uses-permission android:name="android.permission.INTERNET" />\n    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />|' "$FILE"
-          echo "Permissions added:"
+          echo "Permissions:"
           grep "uses-permission" "$FILE"
 
-      - name: Update MainActivity.java to register speech plugin
+      - name: Write MainActivity.java
         run: |
           FILE=$(find android -name "MainActivity.java" | head -1)
-          echo "Updating: $FILE"
-          cat > "$FILE" << 'JAVA'
-package com.nawaz.fixlog;
+          echo "Writing to: $FILE"
+          python3 - << 'PYEOF'
+import os, glob
+files = glob.glob('android/**/MainActivity.java', recursive=True)
+if not files:
+    print("ERROR: MainActivity.java not found")
+    exit(1)
+f = files[0]
+print(f"Writing to {f}")
+content = """package com.nawaz.fixlog;
 
 import android.os.Bundle;
 import com.getcapacitor.BridgeActivity;
@@ -61,9 +68,12 @@ public class MainActivity extends BridgeActivity {
         super.onCreate(savedInstanceState);
     }
 }
-JAVA
-          echo "Done:"
-          cat "$FILE"
+"""
+with open(f, 'w') as fh:
+    fh.write(content)
+print("Done. Contents:")
+print(open(f).read())
+PYEOF
 
       - name: Make gradlew executable
         run: chmod +x android/gradlew
