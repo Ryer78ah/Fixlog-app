@@ -8,9 +8,20 @@
 <title>FixLog</title>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#0a0a0f;--s1:#111118;--s2:#18181f;--s3:#22222c;--border:#2a2a3a;--accent:#00e5ff;--green:#10b981;--warn:#f59e0b;--red:#ef4444;--purple:#a78bfa;--text:#e8e8f0;--t2:#8888aa;--t3:#44445a;--mono:'JetBrains Mono',monospace;--sans:'DM Sans',sans-serif;--r:10px;}
+:root{
+  --bg:#0a0a0f;--s1:#111118;--s2:#18181f;--s3:#22222c;
+  --border:#2a2a3a;--accent:#00e5ff;--green:#10b981;
+  --warn:#f59e0b;--red:#ef4444;--purple:#a78bfa;
+  --text:#e8e8f0;--t2:#8888aa;--t3:#44445a;
+  --mono:'JetBrains Mono',monospace;--sans:'DM Sans',sans-serif;--r:12px;
+  --fs-base:16px;--fs-sm:13px;--fs-xs:11px;--fs-lg:18px;
+}
+body.light-mode{
+  --bg:#f0f2f8;--s1:#ffffff;--s2:#e8eaf2;--s3:#dde0ee;
+  --border:#c8cce0;--text:#1a1a2e;--t2:#555577;--t3:#9999bb;
+}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
-body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;max-width:480px;margin:0 auto;}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:var(--fs-base);min-height:100vh;max-width:520px;margin:0 auto;transition:background .2s,color .2s;}
 
 /* HEADER */
 .header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--bg);z-index:100;}
@@ -24,7 +35,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
 
 /* TABS */
 .tabs{display:flex;border-bottom:1px solid var(--border);position:sticky;top:53px;background:var(--bg);z-index:99;}
-.tab{flex:1;padding:11px 4px;text-align:center;font-size:10px;font-weight:500;color:var(--t3);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;text-transform:uppercase;letter-spacing:.6px;}
+.tab{flex:1;padding:13px 4px;text-align:center;font-size:12px;font-weight:600;color:var(--t3);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;text-transform:uppercase;letter-spacing:.4px;}
 .tab.active{color:var(--accent);border-bottom-color:var(--accent);}
 
 /* VIEWS */
@@ -35,7 +46,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
 
 /* FORM ELEMENTS */
 .client-row{display:flex;gap:8px;margin-bottom:14px;}
-select,input[type=text],input[type=email],textarea{background:var(--s2);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-family:var(--sans);font-size:14px;outline:none;transition:border-color .2s;}
+select,input[type=text],input[type=email],textarea{background:var(--s2);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-family:var(--sans);font-size:var(--fs-base);outline:none;transition:border-color .2s;}
 select:focus,input:focus,textarea:focus{border-color:var(--accent);}
 .client-select{flex:1;padding:11px 12px;}
 .icon-btn{width:42px;height:42px;background:var(--s2);border:1px solid var(--border);border-radius:var(--r);color:var(--t2);font-size:20px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:all .2s;}
@@ -46,7 +57,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
 .voice-textarea{width:100%;min-height:90px;padding:10px;resize:none;border-radius:8px;font-size:14px;line-height:1.6;}
 .voice-textarea::placeholder{color:var(--t3);}
 .dictate-wrap{margin-top:12px;}
-.dictate-btn{width:100%;padding:14px 16px;display:flex;align-items:center;justify-content:center;gap:10px;background:var(--s3);border:1.5px solid var(--border);border-radius:var(--r);color:var(--t2);font-size:14px;font-weight:500;cursor:pointer;transition:all .25s;font-family:var(--sans);}
+.dictate-btn{width:100%;padding:18px 16px;display:flex;align-items:center;justify-content:center;gap:12px;background:var(--s3);border:2px solid var(--border);border-radius:var(--r);color:var(--t2);font-size:var(--fs-lg);font-weight:600;cursor:pointer;transition:all .25s;font-family:var(--sans);}
 .dictate-btn:hover{border-color:var(--accent);color:var(--accent);}
 .dictate-btn.active{background:rgba(239,68,68,.1);border-color:var(--red);color:var(--red);animation:glow 1.2s ease-in-out infinite;}
 @keyframes glow{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.25)}50%{box-shadow:0 0 0 8px rgba(239,68,68,0)}}
@@ -64,19 +75,19 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
 /* TAGS / SEV / DUR */
 .quick-section{margin-bottom:14px;}
 .tag-grid{display:flex;flex-wrap:wrap;gap:7px;}
-.tag{padding:7px 12px;background:var(--s2);border:1px solid var(--border);border-radius:20px;font-size:12px;color:var(--t2);cursor:pointer;transition:all .2s;white-space:nowrap;}
+.tag{padding:9px 14px;background:var(--s2);border:1px solid var(--border);border-radius:20px;font-size:13px;color:var(--t2);cursor:pointer;transition:all .2s;white-space:nowrap;}
 .tag.cat-selected{background:rgba(167,139,250,.1);border-color:var(--purple);color:var(--purple);}
 .dur-row{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;}
-.dur-btn{flex:1;min-width:48px;padding:9px 4px;background:var(--s2);border:1px solid var(--border);border-radius:8px;color:var(--t2);font-size:12px;font-family:var(--mono);cursor:pointer;text-align:center;transition:all .2s;}
+.dur-btn{flex:1;min-width:48px;padding:12px 4px;background:var(--s2);border:1px solid var(--border);border-radius:8px;color:var(--t2);font-size:14px;font-family:var(--mono);cursor:pointer;text-align:center;transition:all .2s;}
 .dur-btn.selected{background:rgba(16,185,129,.1);border-color:var(--green);color:var(--green);}
 .sev-row{display:flex;gap:7px;margin-bottom:16px;}
-.sev-btn{flex:1;padding:9px;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;text-align:center;border:1px solid var(--border);transition:all .2s;background:var(--s2);color:var(--t3);}
+.sev-btn{flex:1;padding:13px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;text-align:center;border:1px solid var(--border);transition:all .2s;background:var(--s2);color:var(--t3);}
 .sev-btn[data-sev="Low"].selected{background:rgba(16,185,129,.12);border-color:var(--green);color:var(--green);}
 .sev-btn[data-sev="Medium"].selected{background:rgba(245,158,11,.12);border-color:var(--warn);color:var(--warn);}
 .sev-btn[data-sev="High"].selected{background:rgba(239,68,68,.12);border-color:var(--red);color:var(--red);}
 
 /* BUTTONS */
-.save-btn{width:100%;padding:14px;background:var(--accent);color:#000;border:none;border-radius:var(--r);font-size:15px;font-weight:600;font-family:var(--sans);cursor:pointer;transition:opacity .2s,transform .1s;}
+.save-btn{width:100%;padding:16px;background:var(--accent);color:#000;border:none;border-radius:var(--r);font-size:var(--fs-lg);font-weight:700;font-family:var(--sans);cursor:pointer;transition:opacity .2s,transform .1s;}
 .save-btn:active{transform:scale(.98);opacity:.85;}
 .btn-row{display:flex;gap:8px;margin-top:8px;}
 .btn-sm{flex:1;padding:11px 8px;border-radius:var(--r);font-size:13px;font-weight:600;font-family:var(--sans);cursor:pointer;border:none;transition:opacity .2s;}
@@ -104,7 +115,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
 .card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:8px;}
 .card-client{font-size:13px;font-weight:600;}
 .card-time{font-family:var(--mono);font-size:10px;color:var(--t3);white-space:nowrap;}
-.card-desc{font-size:13px;color:var(--t2);line-height:1.45;margin-bottom:10px;}
+.card-desc{font-size:var(--fs-sm);color:var(--t2);line-height:1.5;margin-bottom:12px;}
 .card-tags{display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
 .ctag{font-size:10px;padding:3px 8px;border-radius:12px;font-family:var(--mono);font-weight:600;}
 .ctag.cat{background:rgba(167,139,250,.12);color:var(--purple);}
@@ -452,6 +463,29 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
     </div>
   </div>
 
+  <!-- Theme -->
+  <div class="settings-section">
+    <div class="settings-section-header">
+      <div class="settings-section-icon">🌗</div>
+      <div>
+        <div class="settings-section-title">Appearance</div>
+        <div class="settings-section-sub">Switch between dark and light mode</div>
+      </div>
+    </div>
+    <div class="settings-body">
+      <div style="display:flex;gap:10px;">
+        <button onclick="setTheme('dark')" id="btnDark"
+          style="flex:1;padding:14px;border-radius:var(--r);font-size:15px;font-weight:600;cursor:pointer;border:2px solid var(--border);background:var(--s2);color:var(--text);transition:all .2s;font-family:var(--sans);">
+          🌙 Dark
+        </button>
+        <button onclick="setTheme('light')" id="btnLight"
+          style="flex:1;padding:14px;border-radius:var(--r);font-size:15px;font-weight:600;cursor:pointer;border:2px solid var(--border);background:var(--s2);color:var(--text);transition:all .2s;font-family:var(--sans);">
+          ☀️ Light
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Danger zone -->
   <div class="settings-section" style="border-color:rgba(239,68,68,.2)">
     <div class="settings-section-header">
@@ -576,6 +610,7 @@ function renderDurRow(){
 //  SETTINGS PAGE RENDER
 // ══════════════════════════════════
 function renderSettingsPage(){
+  var _t = localStorage.getItem('fl_theme')||'dark'; updateThemeButtons(_t);
   // Category chips
   document.getElementById('catChips').innerHTML=categories.map((c,i)=>
     `<div class="setting-chip">${catIcon(c)} ${c} <span class="chip-del" onclick="removeCat(${i})">×</span></div>`
@@ -745,28 +780,47 @@ function startCapacitorSR(ta){
     return;
   }
 
+  // Always stop any previous session cleanly before starting new one
+  // This fixes the "nothing happens on 2nd tap" bug
+  SR.stop().catch(function(){}).finally(function(){
+    _doCapacitorSR(SR, ta);
+  });
+
+  // Fallback if finally not supported
+  if(!Promise.prototype.finally){
+    setTimeout(function(){ _doCapacitorSR(SR, ta); }, 300);
+  }
+}
+
+function _doCapacitorSR(SR, ta){
+  if(!isListening) return; // user tapped stop while we were cleaning up
+
   var accumulated = ta.value;
 
-  // Step 1: Check / request permission
+  // Remove old listeners first
+  if(window._srPartialListener){
+    try{ window._srPartialListener.remove(); }catch(e){}
+    window._srPartialListener = null;
+  }
+
   SR.requestPermission().then(function(result){
-    // result.permission = 'granted' | 'denied' | 'prompt'
-    var granted = result.permission === 'granted' || result.permission === true;
+    var granted = result.permission === 'granted'
+               || result.permission === true
+               || result.permission === 1;
     if(!granted){
       isListening = false;
       document.getElementById('dictateBtn').classList.remove('active');
-      document.getElementById('dictateBtnLabel').textContent = 'Tap to Speak';
+      document.getElementById('dictateBtnLabel').textContent = '🎤 Tap to Speak';
       setStatus('Mic permission denied — check Settings','');
       showMicDeniedGuide();
       return;
     }
 
-    isListening = true;
     document.getElementById('dictateBtn').classList.add('active');
     document.getElementById('dictateBtnLabel').textContent = 'Listening… tap to stop';
     setStatus('🔴 Listening — speak now','recording');
 
-    // Step 2: Listen for partial results
-    if(window._srPartialListener){ try{window._srPartialListener.remove();}catch(e){} }
+    // Attach partial results listener
     SR.addListener('partialResults', function(data){
       if(!isListening) return;
       if(data && data.matches && data.matches.length > 0){
@@ -774,31 +828,34 @@ function startCapacitorSR(ta){
         ta.style.height = 'auto';
         ta.style.height = Math.min(ta.scrollHeight, 280) + 'px';
       }
-    }).then(function(h){ window._srPartialListener = h; });
+    }).then(function(h){ window._srPartialListener = h; }).catch(function(){});
 
-    // Step 3: Start recognition
+    // Start — resolves with final result when utterance ends
     SR.start({
       language: 'en-US',
       maxResults: 1,
       partialResults: true,
       popup: false
     }).then(function(finalResult){
-      // start() resolves with final result when speech ends
       if(finalResult && finalResult.matches && finalResult.matches.length > 0){
         accumulated = (accumulated + finalResult.matches[0] + ' ').trimStart();
         ta.value = accumulated;
+        ta.style.height = 'auto';
+        ta.style.height = Math.min(ta.scrollHeight, 280) + 'px';
       }
-      // Auto restart if still listening
+      // Auto-restart for continuous listening
       if(isListening){
-        setTimeout(function(){ startCapacitorSR(ta); }, 300);
+        setStatus('🟡 Keep speaking…','recording');
+        setTimeout(function(){
+          if(isListening) _doCapacitorSR(SR, ta);
+        }, 200);
       }
     }).catch(function(err){
-      console.warn('SR start error:', err);
+      console.warn('SR error:', err);
       if(isListening){
-        // Retry once
         setTimeout(function(){
-          if(isListening) startCapacitorSR(ta);
-        }, 500);
+          if(isListening) _doCapacitorSR(SR, ta);
+        }, 600);
       }
     });
 
@@ -806,7 +863,7 @@ function startCapacitorSR(ta){
     console.warn('Permission error:', err);
     isListening = false;
     document.getElementById('dictateBtn').classList.remove('active');
-    document.getElementById('dictateBtnLabel').textContent = 'Tap to Speak';
+    document.getElementById('dictateBtnLabel').textContent = '🎤 Tap to Speak';
     setStatus('Mic error — try again','');
   });
 }
@@ -870,17 +927,15 @@ function doStartSR(ta, SR, accumulated, restartCount){
 function stopDictate(){
   isListening = false;
 
-  // Stop Capacitor SR if running
+  // Clean up Capacitor SR
   var SR = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.SpeechRecognition;
-  if(SR){
-    try{
-      SR.stop().catch(function(){});
-    }catch(e){}
-    if(window._srPartialListener){ try{window._srPartialListener.remove();}catch(e){} window._srPartialListener = null; }
-    if(window._srFinalListener){ try{window._srFinalListener.remove();}catch(e){} window._srFinalListener = null; }
+  if(SR){ try{ SR.stop(); }catch(e){} }
+  if(window._srPartialListener){
+    try{ window._srPartialListener.remove(); }catch(e){}
+    window._srPartialListener = null;
   }
 
-  // Stop desktop SR if running
+  // Clean up desktop SR
   if(recognition){
     recognition.onend = null;
     recognition.onerror = null;
@@ -889,10 +944,10 @@ function stopDictate(){
   }
 
   document.getElementById('dictateBtn').classList.remove('active');
-  document.getElementById('dictateBtnLabel').textContent = 'Tap to Speak';
+  document.getElementById('dictateBtnLabel').textContent = '🎤 Tap to Speak';
   var ta = document.getElementById('issueDesc');
   setStatus(
-    ta.value.trim() ? '✓ Done — tap Save to log this fix' : 'Tap to speak (desktop) or keyboard 🎤 (browser)',
+    ta.value.trim() ? '✓ Done — tap Save to log this fix' : 'Tap to speak (desktop) or keyboard 🎤 (mobile)',
     ta.value.trim() ? 'saved' : ''
   );
 }
@@ -1527,10 +1582,55 @@ function shareReportAsFile(titleStr, reportBodyHTML){
   }
 }
 
-// Desktop fallback: open styled report in new tab so user can print/save
+// Fallback: show report in a full-screen overlay inside the app
+// (avoids the "opens in same tab, can't go back" bug in Android WebView)
 function openReportInNewTab(fileContent){
-  var w = window.open('','_blank');
-  if(w){ w.document.write(fileContent); w.document.close(); }
+  // Remove any existing viewer
+  var existing = document.getElementById('reportViewer');
+  if(existing) existing.remove();
+
+  var overlay = document.createElement('div');
+  overlay.id = 'reportViewer';
+  overlay.setAttribute('style',
+    'position:fixed;inset:0;background:#fff;z-index:9999;display:flex;flex-direction:column;'
+  );
+
+  var toolbar = document.createElement('div');
+  toolbar.setAttribute('style',
+    'display:flex;align-items:center;justify-content:space-between;'+
+    'padding:12px 16px;background:#0a0a0f;border-bottom:1px solid #2a2a3a;flex-shrink:0;'
+  );
+  toolbar.innerHTML =
+    '<span style="color:#00e5ff;font-family:monospace;font-weight:700;font-size:15px;">IT Report</span>'+
+    '<div style="display:flex;gap:8px;">'+
+    '<button onclick="printReportViewer()" style="padding:7px 14px;background:#10b981;color:#000;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">🖨 Print/PDF</button>'+
+    '<button onclick="closeReportViewer()" style="padding:7px 14px;background:#ef4444;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">✕ Close</button>'+
+    '</div>';
+
+  var frame = document.createElement('iframe');
+  frame.setAttribute('style','flex:1;border:none;width:100%;');
+  frame.setAttribute('title','Report');
+
+  overlay.appendChild(toolbar);
+  overlay.appendChild(frame);
+  document.body.appendChild(overlay);
+
+  // Write report content into iframe
+  frame.onload = function(){};
+  var doc = frame.contentDocument || frame.contentWindow.document;
+  doc.open();
+  doc.write(fileContent);
+  doc.close();
+
+  // Store for print
+  window._reportFileContent = fileContent;
+}
+
+function closeReportViewer(){ var g=document.getElementById('reportViewer'); if(g)g.remove(); }
+
+function printReportViewer(){
+  var frame = document.querySelector('#reportViewer iframe');
+  if(frame && frame.contentWindow){ frame.contentWindow.print(); }
 }
 
 function shareWhatsAppGlobal(){
@@ -1661,6 +1761,35 @@ function exportData(){
   const blob=new Blob([data],{type:'application/json'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='fixlog-backup.json';a.click();
 }
+
+// ── THEME ────────────────────────────────────────────────
+function setTheme(mode){
+  if(mode==='light'){
+    document.body.classList.add('light-mode');
+    document.querySelector('meta[name=theme-color]').setAttribute('content','#f0f2f8');
+  } else {
+    document.body.classList.remove('light-mode');
+    document.querySelector('meta[name=theme-color]').setAttribute('content','#0a0a0f');
+  }
+  localStorage.setItem('fl_theme', mode);
+  updateThemeButtons(mode);
+}
+
+function updateThemeButtons(mode){
+  var btnDark = document.getElementById('btnDark');
+  var btnLight = document.getElementById('btnLight');
+  if(!btnDark || !btnLight) return;
+  var activeStyle = 'border-color:var(--accent);background:rgba(0,229,255,.1);color:var(--accent);';
+  var inactiveStyle = 'border-color:var(--border);background:var(--s2);color:var(--text);';
+  btnDark.setAttribute('style', btnDark.getAttribute('style').replace(/border-color:[^;]+;background:[^;]+;color:[^;]+;/,'') + (mode==='dark'?activeStyle:inactiveStyle));
+  btnLight.setAttribute('style', btnLight.getAttribute('style').replace(/border-color:[^;]+;background:[^;]+;color:[^;]+;/,'') + (mode==='light'?activeStyle:inactiveStyle));
+}
+
+// Load theme on startup
+(function(){
+  var saved = localStorage.getItem('fl_theme') || 'dark';
+  setTheme(saved);
+})();
 
 
 // ── PWA Bootstrap ──────────────────────────────
