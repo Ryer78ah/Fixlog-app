@@ -1,0 +1,1729 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0a0a0f">
+<title>FixLog</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0a0f;--s1:#111118;--s2:#18181f;--s3:#22222c;--border:#2a2a3a;--accent:#00e5ff;--green:#10b981;--warn:#f59e0b;--red:#ef4444;--purple:#a78bfa;--text:#e8e8f0;--t2:#8888aa;--t3:#44445a;--mono:'JetBrains Mono',monospace;--sans:'DM Sans',sans-serif;--r:10px;}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;max-width:480px;margin:0 auto;}
+
+/* HEADER */
+.header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--bg);z-index:100;}
+.logo{font-family:var(--mono);font-weight:700;font-size:17px;color:var(--accent);}
+.logo em{color:var(--t3);font-style:normal;}
+.header-right{display:flex;align-items:center;gap:10px;}
+.hbadge{font-family:var(--mono);font-size:10px;color:var(--t3);background:var(--s2);border:1px solid var(--border);padding:4px 8px;border-radius:20px;}
+.hbadge b{color:var(--accent);}
+.settings-icon{width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t3);border-radius:8px;transition:color .2s;font-size:18px;}
+.settings-icon:hover{color:var(--accent);}
+
+/* TABS */
+.tabs{display:flex;border-bottom:1px solid var(--border);position:sticky;top:53px;background:var(--bg);z-index:99;}
+.tab{flex:1;padding:11px 4px;text-align:center;font-size:10px;font-weight:500;color:var(--t3);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;text-transform:uppercase;letter-spacing:.6px;}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+
+/* VIEWS */
+.view{display:none;padding:18px;animation:fadein .2s;}
+.view.active{display:block;}
+@keyframes fadein{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+.slabel{font-family:var(--mono);font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;}
+
+/* FORM ELEMENTS */
+.client-row{display:flex;gap:8px;margin-bottom:14px;}
+select,input[type=text],input[type=email],textarea{background:var(--s2);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-family:var(--sans);font-size:14px;outline:none;transition:border-color .2s;}
+select:focus,input:focus,textarea:focus{border-color:var(--accent);}
+.client-select{flex:1;padding:11px 12px;}
+.icon-btn{width:42px;height:42px;background:var(--s2);border:1px solid var(--border);border-radius:var(--r);color:var(--t2);font-size:20px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:all .2s;}
+.icon-btn:hover{border-color:var(--accent);color:var(--accent);}
+
+/* VOICE BOX */
+.voice-box{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:14px;}
+.voice-textarea{width:100%;min-height:90px;padding:10px;resize:none;border-radius:8px;font-size:14px;line-height:1.6;}
+.voice-textarea::placeholder{color:var(--t3);}
+.dictate-wrap{margin-top:12px;}
+.dictate-btn{width:100%;padding:14px 16px;display:flex;align-items:center;justify-content:center;gap:10px;background:var(--s3);border:1.5px solid var(--border);border-radius:var(--r);color:var(--t2);font-size:14px;font-weight:500;cursor:pointer;transition:all .25s;font-family:var(--sans);}
+.dictate-btn:hover{border-color:var(--accent);color:var(--accent);}
+.dictate-btn.active{background:rgba(239,68,68,.1);border-color:var(--red);color:var(--red);animation:glow 1.2s ease-in-out infinite;}
+@keyframes glow{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.25)}50%{box-shadow:0 0 0 8px rgba(239,68,68,0)}}
+.dictate-icon{width:18px;height:18px;flex-shrink:0;}
+.dictate-status{margin-top:8px;font-size:11px;font-family:var(--mono);color:var(--t3);text-align:center;min-height:16px;}
+.dictate-status.recording{color:var(--red);}
+.dictate-status.saved{color:var(--green);}
+.audio-saved-bar{display:none;margin-top:10px;align-items:center;gap:8px;background:rgba(16,185,129,.07);border:1px solid rgba(16,185,129,.2);border-radius:8px;padding:9px 12px;}
+.audio-saved-bar.show{display:flex;}
+.asb-play{width:26px;height:26px;border-radius:50%;background:var(--green);border:none;color:#000;font-size:11px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+.asb-label{font-size:11px;color:var(--green);font-family:var(--mono);flex:1;}
+.asb-del{color:var(--t3);font-size:18px;cursor:pointer;padding:2px 4px;}
+.asb-del:hover{color:var(--red);}
+
+/* TAGS / SEV / DUR */
+.quick-section{margin-bottom:14px;}
+.tag-grid{display:flex;flex-wrap:wrap;gap:7px;}
+.tag{padding:7px 12px;background:var(--s2);border:1px solid var(--border);border-radius:20px;font-size:12px;color:var(--t2);cursor:pointer;transition:all .2s;white-space:nowrap;}
+.tag.cat-selected{background:rgba(167,139,250,.1);border-color:var(--purple);color:var(--purple);}
+.dur-row{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;}
+.dur-btn{flex:1;min-width:48px;padding:9px 4px;background:var(--s2);border:1px solid var(--border);border-radius:8px;color:var(--t2);font-size:12px;font-family:var(--mono);cursor:pointer;text-align:center;transition:all .2s;}
+.dur-btn.selected{background:rgba(16,185,129,.1);border-color:var(--green);color:var(--green);}
+.sev-row{display:flex;gap:7px;margin-bottom:16px;}
+.sev-btn{flex:1;padding:9px;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;text-align:center;border:1px solid var(--border);transition:all .2s;background:var(--s2);color:var(--t3);}
+.sev-btn[data-sev="Low"].selected{background:rgba(16,185,129,.12);border-color:var(--green);color:var(--green);}
+.sev-btn[data-sev="Medium"].selected{background:rgba(245,158,11,.12);border-color:var(--warn);color:var(--warn);}
+.sev-btn[data-sev="High"].selected{background:rgba(239,68,68,.12);border-color:var(--red);color:var(--red);}
+
+/* BUTTONS */
+.save-btn{width:100%;padding:14px;background:var(--accent);color:#000;border:none;border-radius:var(--r);font-size:15px;font-weight:600;font-family:var(--sans);cursor:pointer;transition:opacity .2s,transform .1s;}
+.save-btn:active{transform:scale(.98);opacity:.85;}
+.btn-row{display:flex;gap:8px;margin-top:8px;}
+.btn-sm{flex:1;padding:11px 8px;border-radius:var(--r);font-size:13px;font-weight:600;font-family:var(--sans);cursor:pointer;border:none;transition:opacity .2s;}
+.btn-copy{background:var(--s3);color:var(--text);border:1px solid var(--border)!important;}
+.btn-wa{background:var(--green);color:#000;}
+.btn-pdf{background:var(--red);color:#fff;}
+.btn-purple{background:var(--purple);color:#000;}
+
+/* TOAST */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--green);color:#000;padding:11px 20px;border-radius:30px;font-size:13px;font-weight:600;z-index:9999;transition:transform .3s;white-space:nowrap;pointer-events:none;}
+.toast.show{transform:translateX(-50%) translateY(0);}
+
+/* HISTORY */
+.log-filters{display:flex;gap:8px;margin-bottom:14px;overflow-x:auto;padding-bottom:4px;}
+.log-filters::-webkit-scrollbar{display:none;}
+.filter-btn{padding:7px 13px;background:var(--s2);border:1px solid var(--border);border-radius:20px;font-size:11px;color:var(--t2);cursor:pointer;white-space:nowrap;transition:all .2s;flex-shrink:0;}
+.filter-btn.active{background:rgba(0,229,255,.1);border-color:var(--accent);color:var(--accent);}
+.search-box{position:relative;margin-bottom:14px;}
+.search-box input{width:100%;padding:10px 12px 10px 36px;border-radius:var(--r);font-size:14px;}
+.search-icon{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--t3);font-size:15px;pointer-events:none;}
+.log-list{display:flex;flex-direction:column;gap:10px;}
+.log-card{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:14px;cursor:pointer;transition:border-color .2s;}
+.log-card:hover{border-color:var(--t3);}
+.log-card.repeat{border-left:3px solid var(--warn);}
+.card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:8px;}
+.card-client{font-size:13px;font-weight:600;}
+.card-time{font-family:var(--mono);font-size:10px;color:var(--t3);white-space:nowrap;}
+.card-desc{font-size:13px;color:var(--t2);line-height:1.45;margin-bottom:10px;}
+.card-tags{display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
+.ctag{font-size:10px;padding:3px 8px;border-radius:12px;font-family:var(--mono);font-weight:600;}
+.ctag.cat{background:rgba(167,139,250,.12);color:var(--purple);}
+.ctag.dur{background:rgba(0,229,255,.08);color:var(--accent);}
+.ctag.sev-Low{background:rgba(16,185,129,.1);color:var(--green);}
+.ctag.sev-Medium{background:rgba(245,158,11,.1);color:var(--warn);}
+.ctag.sev-High{background:rgba(239,68,68,.1);color:var(--red);}
+.ctag.has-audio{background:rgba(16,185,129,.08);color:var(--green);}
+.repeat-badge{font-size:10px;color:var(--warn);font-family:var(--mono);margin-left:auto;}
+.card-actions{display:flex;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);}
+.card-act-btn{flex:1;padding:7px;background:var(--s2);border:1px solid var(--border);border-radius:7px;color:var(--t2);font-size:11px;cursor:pointer;text-align:center;transition:all .2s;}
+.card-act-btn:hover{border-color:var(--accent);color:var(--accent);}
+.card-act-btn.del:hover{border-color:var(--red);color:var(--red);}
+.empty-state{text-align:center;padding:50px 20px;color:var(--t3);font-size:13px;}
+.empty-icon{font-size:36px;margin-bottom:12px;opacity:.4;}
+
+/* STATS */
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px;}
+.stat-card{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:14px;}
+.stat-num{font-family:var(--mono);font-size:26px;font-weight:700;color:var(--accent);}
+.stat-label{font-size:11px;color:var(--t3);margin-top:4px;}
+.stat-sub{font-family:var(--mono);font-size:11px;color:var(--t2);margin-top:2px;}
+.section-title{font-size:12px;font-weight:600;color:var(--t2);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;margin-top:18px;}
+.bar-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+.bar-label{font-size:12px;color:var(--t2);width:90px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.bar-track{flex:1;height:6px;background:var(--s2);border-radius:3px;overflow:hidden;}
+.bar-fill{height:100%;border-radius:3px;background:var(--accent);transition:width .5s;}
+.bar-count{font-family:var(--mono);font-size:11px;color:var(--t3);width:22px;text-align:right;}
+.repeat-list{display:flex;flex-direction:column;gap:8px;}
+.repeat-item{background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.2);border-radius:var(--r);padding:12px;}
+.share-section{margin-top:18px;}
+.share-btn{width:100%;padding:13px;background:var(--s1);border:1px solid var(--border);border-radius:var(--r);color:var(--t2);font-size:14px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .2s;font-family:var(--sans);margin-bottom:8px;}
+.share-btn:hover{border-color:var(--accent);color:var(--accent);}
+.share-btn.wa{border-color:rgba(16,185,129,.3);color:var(--green);}
+.share-btn.wa:hover{background:rgba(16,185,129,.08);}
+.share-btn.pdf{border-color:rgba(239,68,68,.3);color:var(--red);}
+.share-btn.pdf:hover{background:rgba(239,68,68,.06);}
+
+/* CLIENTS */
+.add-client-form{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:14px;}
+.add-client-form input{width:100%;padding:10px 12px;margin-bottom:10px;border-radius:8px;font-size:14px;}
+.add-client-form input::placeholder{color:var(--t3);}
+.client-list{display:flex;flex-direction:column;gap:8px;}
+.client-card{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;}
+.client-card-header{padding:13px 15px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:background .2s;user-select:none;}
+.client-card-header:hover{background:var(--s2);}
+.client-card-header.open{border-bottom:1px solid var(--border);background:var(--s2);}
+.client-name{font-size:14px;font-weight:500;}
+.client-subtext{font-family:var(--mono);font-size:10px;color:var(--t3);margin-top:3px;}
+.client-meta{display:flex;align-items:center;gap:8px;}
+.client-chevron{color:var(--t3);font-size:11px;transition:transform .25s;display:inline-block;}
+.client-chevron.open{transform:rotate(180deg);}
+.client-del-btn{background:none;border:none;color:var(--t3);font-size:20px;cursor:pointer;padding:2px 4px;line-height:1;transition:color .2s;}
+.client-del-btn:hover{color:var(--red);}
+.client-report-btn{background:none;border:1px solid var(--border);border-radius:6px;color:var(--t3);font-size:10px;cursor:pointer;padding:4px 8px;transition:all .2s;font-family:var(--sans);}
+.client-report-btn:hover{border-color:var(--purple);color:var(--purple);}
+.client-history{display:none;}
+.client-history.open{display:block;}
+.client-hist-empty{padding:18px;font-size:12px;color:var(--t3);text-align:center;}
+.client-log-item{border-bottom:1px solid var(--border);padding:14px 15px;}
+.client-log-item:last-child{border-bottom:none;}
+.cli-log-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;gap:8px;}
+.cli-log-date{font-family:var(--mono);font-size:10px;color:var(--t3);flex-shrink:0;}
+.cli-log-tags{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end;}
+.cli-transcript-label{font-size:10px;color:var(--t3);font-family:var(--mono);text-transform:uppercase;letter-spacing:.8px;margin-bottom:5px;}
+.cli-log-transcript{font-size:13px;color:var(--t2);line-height:1.55;background:var(--s2);border-radius:7px;padding:10px;margin-bottom:8px;}
+.cli-audio-bar{display:flex;align-items:center;gap:8px;background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.2);border-radius:8px;padding:8px 10px;margin-bottom:8px;}
+.cli-play-btn{width:26px;height:26px;border-radius:50%;background:var(--green);border:none;color:#000;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.cli-audio-label{font-size:11px;color:var(--green);font-family:var(--mono);flex:1;}
+.cli-log-actions{display:flex;gap:6px;flex-wrap:wrap;}
+.cli-act-btn{padding:6px 11px;background:var(--s2);border:1px solid var(--border);border-radius:6px;color:var(--t2);font-size:11px;cursor:pointer;transition:all .2s;white-space:nowrap;}
+.cli-act-btn:hover{border-color:var(--accent);color:var(--accent);}
+.cli-act-btn.rpt:hover{border-color:var(--purple);color:var(--purple);}
+.cli-act-btn.del:hover{border-color:var(--red);color:var(--red);}
+
+/* ── SETTINGS ── */
+.settings-section{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);margin-bottom:16px;overflow:hidden;}
+.settings-section-header{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;}
+.settings-section-icon{font-size:16px;}
+.settings-section-title{font-size:14px;font-weight:600;}
+.settings-section-sub{font-size:11px;color:var(--t3);margin-top:2px;}
+.settings-body{padding:14px 16px;}
+.setting-chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:10px;}
+.setting-chip{display:flex;align-items:center;gap:5px;padding:6px 10px;background:var(--s2);border:1px solid var(--border);border-radius:20px;font-size:12px;color:var(--t2);}
+.setting-chip.locked{opacity:.5;}
+.chip-del{color:var(--t3);cursor:pointer;font-size:14px;line-height:1;transition:color .2s;}
+.chip-del:hover{color:var(--red);}
+.add-chip-row{display:flex;gap:8px;}
+.add-chip-input{flex:1;padding:9px 12px;border-radius:8px;font-size:13px;}
+.add-chip-input::placeholder{color:var(--t3);}
+.add-chip-btn{padding:9px 16px;background:var(--accent);color:#000;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:var(--sans);}
+
+/* Severity editor */
+.sev-editor{display:flex;flex-direction:column;gap:8px;margin-bottom:10px;}
+.sev-edit-row{display:flex;align-items:center;gap:8px;}
+.sev-color-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.sev-edit-input{flex:1;padding:8px 10px;border-radius:8px;font-size:13px;}
+.sev-edit-del{color:var(--t3);cursor:pointer;font-size:16px;padding:4px;transition:color .2s;background:none;border:none;}
+.sev-edit-del:hover{color:var(--red);}
+
+/* Template editor */
+.template-field{margin-bottom:12px;}
+.template-field label{font-size:11px;color:var(--t3);font-family:var(--mono);text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:6px;}
+.template-field input,.template-field textarea{width:100%;padding:10px 12px;border-radius:8px;font-size:13px;}
+.template-field textarea{min-height:80px;resize:none;line-height:1.5;}
+.template-field input::placeholder,.template-field textarea::placeholder{color:var(--t3);}
+.logo-upload-area{border:2px dashed var(--border);border-radius:var(--r);padding:20px;text-align:center;cursor:pointer;transition:border-color .2s;margin-bottom:10px;}
+.logo-upload-area:hover{border-color:var(--accent);}
+.logo-upload-area input{display:none;}
+.logo-preview{width:100%;max-height:80px;object-fit:contain;border-radius:6px;margin-bottom:8px;display:none;}
+.logo-preview.show{display:block;}
+.logo-upload-hint{font-size:12px;color:var(--t3);}
+.logo-upload-hint span{color:var(--accent);}
+
+/* MODALS */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.78);z-index:200;display:none;align-items:flex-end;}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--s1);border:1px solid var(--border);border-radius:16px 16px 0 0;padding:20px;width:100%;max-height:90vh;overflow-y:auto;animation:slideup .25s;}
+@keyframes slideup{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;}
+.modal-title{font-size:15px;font-weight:600;}
+.modal-close{background:none;border:none;color:var(--t3);font-size:26px;cursor:pointer;line-height:1;padding:0;}
+.modal-field{margin-bottom:13px;}
+.modal-field label{font-size:10px;color:var(--t3);font-family:var(--mono);text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:5px;}
+
+/* REPORT PREVIEW inside modal */
+.report-preview{background:#fff;border-radius:12px;padding:28px;color:#1a1a2e;font-family:'DM Sans',sans-serif;margin-bottom:16px;}
+.rp-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;padding-bottom:16px;border-bottom:2px solid #e8e8f0;}
+.rp-logo-area{display:flex;align-items:center;gap:12px;}
+.rp-logo-img{max-height:48px;max-width:140px;object-fit:contain;display:none;}
+.rp-logo-img.show{display:block;}
+.rp-company{font-size:16px;font-weight:700;color:#1a1a2e;}
+.rp-company-sub{font-size:11px;color:#888;margin-top:2px;}
+.rp-doc-info{text-align:right;}
+.rp-doc-title{font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:.8px;}
+.rp-doc-date{font-size:13px;color:#1a1a2e;margin-top:2px;font-weight:500;}
+.rp-title{font-size:20px;font-weight:700;color:#1a1a2e;margin-bottom:4px;}
+.rp-subtitle{font-size:12px;color:#888;margin-bottom:20px;}
+.rp-summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px;}
+.rp-summary-card{background:#f8f9ff;border:1px solid #e8e8f0;border-radius:10px;padding:12px;text-align:center;}
+.rp-summary-num{font-size:22px;font-weight:700;color:#1a1a2e;font-family:var(--mono);}
+.rp-summary-label{font-size:10px;color:#888;margin-top:3px;text-transform:uppercase;letter-spacing:.5px;}
+.rp-section{margin-bottom:20px;}
+.rp-section-title{font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #e8e8f0;}
+.rp-issue-card{background:#f8f9ff;border:1px solid #e8e8f0;border-radius:8px;padding:12px;margin-bottom:8px;}
+.rp-issue-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;}
+.rp-issue-num{font-size:11px;font-weight:700;color:#888;font-family:var(--mono);}
+.rp-issue-date{font-size:10px;color:#888;}
+.rp-issue-badges{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px;}
+.rp-badge{font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600;}
+.rp-badge.cat{background:#ede9ff;color:#6d28d9;}
+.rp-badge.sev-Low{background:#d1fae5;color:#065f46;}
+.rp-badge.sev-Medium{background:#fef3c7;color:#92400e;}
+.rp-badge.sev-High{background:#fee2e2;color:#991b1b;}
+.rp-badge.dur{background:#e0f7fa;color:#006064;}
+.rp-badge.user{background:#e8f4fd;color:#1565c0;}
+.rp-field-label{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;font-weight:600;}
+.rp-field-value{font-size:12px;color:#2d2d4e;line-height:1.5;margin-bottom:8px;}
+.rp-footer{text-align:center;padding-top:16px;border-top:1px solid #e8e8f0;font-size:10px;color:#bbb;margin-top:4px;}
+.rp-footer b{color:#888;}
+</style>
+  <link rel="apple-touch-icon" href="data:image/png;base64,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">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="FixLog">
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">Fix<em>Log</em></div>
+  <div class="header-right">
+    <div class="hbadge">Today: <b id="todayCount">0</b></div>
+    <div class="settings-icon" onclick="switchTab('settings')" title="Settings">⚙</div>
+  </div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('log')">📝 Log</div>
+  <div class="tab" onclick="switchTab('history')">🕒 History</div>
+  <div class="tab" onclick="switchTab('stats')">📊 Stats</div>
+  <div class="tab" onclick="switchTab('clients')">👥 Clients</div>
+  <div class="tab" onclick="switchTab('settings')">⚙ Settings</div>
+</div>
+
+<!-- ══════════ LOG ══════════ -->
+<div class="view active" id="view-log">
+  <div class="slabel">Client</div>
+  <div class="client-row">
+    <select class="client-select" id="logClient"><option value="">— Select client —</option></select>
+    <div class="icon-btn" onclick="switchTab('clients')">＋</div>
+  </div>
+  <div class="voice-box">
+    <div class="slabel">Describe the issue &amp; fix</div>
+    <textarea class="voice-textarea" id="issueDesc" placeholder="Tap the button below and speak…&#10;&#10;e.g. Fixed Ahmed's Outlook, wasn't syncing. Cleared credential manager, working now."></textarea>
+    <div class="dictate-wrap">
+      <div class="dictate-btn" id="dictateBtn" onclick="toggleDictate()">
+        <svg class="dictate-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+        <span id="dictateBtnLabel">🎤 Tap to Speak</span>
+      </div>
+      <div class="dictate-status" id="dictateStatus">Tap to speak (desktop) or use keyboard 🎤 (mobile)</div>
+    </div>
+    <div class="audio-saved-bar" id="audioSavedBar">
+      <button class="asb-play" id="asbPlayBtn" onclick="playDictateAudio()">▶</button>
+      <span class="asb-label">🎙 Recording ready</span>
+      <span class="asb-del" onclick="clearDictation()">×</span>
+    </div>
+  </div>
+  <div class="quick-section">
+    <div class="slabel">Category</div>
+    <div class="tag-grid" id="catGrid"></div>
+  </div>
+  <div class="quick-section">
+    <div class="slabel">Severity</div>
+    <div class="sev-row" id="sevRow"></div>
+  </div>
+  <div class="quick-section">
+    <div class="slabel">Time Spent</div>
+    <div class="dur-row" id="durRow"></div>
+  </div>
+  <button class="save-btn" onclick="saveLog()">Save Log Entry</button>
+</div>
+
+<!-- ══════════ HISTORY ══════════ -->
+<div class="view" id="view-history">
+  <div class="search-box"><span class="search-icon">🔍</span><input type="text" id="searchInput" placeholder="Search client, issue, category…" oninput="renderHistory()"></div>
+  <div class="log-filters">
+    <div class="filter-btn active" onclick="setFilter('All',this)">All</div>
+    <div class="filter-btn" onclick="setFilter('Today',this)">Today</div>
+    <div class="filter-btn" onclick="setFilter('This Week',this)">This Week</div>
+    <div class="filter-btn" onclick="setFilter('High',this)">🔴 High</div>
+    <div class="filter-btn" onclick="setFilter('Recurring',this)">⚠ Recurring</div>
+    <div class="filter-btn" onclick="setFilter('Has Audio',this)">🎙 Audio</div>
+  </div>
+  <div class="log-list" id="logList"><div class="empty-state"><div class="empty-icon">📋</div>No logs yet</div></div>
+</div>
+
+<!-- ══════════ STATS ══════════ -->
+<div class="view" id="view-stats">
+  <div class="stats-grid">
+    <div class="stat-card"><div class="stat-num" id="statTotal">0</div><div class="stat-label">Total Fixes</div><div class="stat-sub" id="statMonth">This month: 0</div></div>
+    <div class="stat-card"><div class="stat-num" id="statClients">0</div><div class="stat-label">Clients Served</div><div class="stat-sub" id="statTopClient">—</div></div>
+    <div class="stat-card"><div class="stat-num" id="statHours">0m</div><div class="stat-label">Time Logged</div><div class="stat-sub">This month</div></div>
+    <div class="stat-card"><div class="stat-num" id="statRecurring">0</div><div class="stat-label">Recurring Issues</div><div class="stat-sub">Need root fix</div></div>
+  </div>
+  <div class="section-title">Issues by Category</div><div id="catBars"></div>
+  <div class="section-title">Issues by Client</div><div id="clientBars"></div>
+  <div class="section-title" id="recurringTitle" style="display:none">⚠ Recurring Issues</div>
+  <div class="repeat-list" id="recurringList"></div>
+  <div class="share-section">
+    <div class="section-title">Monthly Report</div>
+    <button class="share-btn" onclick="openFullReport()">📄 View &amp; Export Full Report</button>
+    <button class="share-btn wa" onclick="shareWhatsAppGlobal()">📤 Share Report</button>
+  </div>
+</div>
+
+<!-- ══════════ CLIENTS ══════════ -->
+<div class="view" id="view-clients">
+  <div class="add-client-form">
+    <div class="slabel">Add New Client</div>
+    <input type="text" id="newClientName" placeholder="Client or company name…" maxlength="50">
+    <button class="save-btn" onclick="addClient()">Add Client</button>
+  </div>
+  <div class="slabel">Tap a client to expand history</div>
+  <div class="client-list" id="clientList"></div>
+</div>
+
+<!-- ══════════ SETTINGS ══════════ -->
+<div class="view" id="view-settings">
+
+  <!-- Categories -->
+  <div class="settings-section">
+    <div class="settings-section-header">
+      <div class="settings-section-icon">🏷</div>
+      <div><div class="settings-section-title">Issue Categories</div><div class="settings-section-sub">Add, remove, or reorder categories used when logging</div></div>
+    </div>
+    <div class="settings-body">
+      <div class="setting-chips" id="catChips"></div>
+      <div class="add-chip-row">
+        <input class="add-chip-input" type="text" id="newCatInput" placeholder="e.g. VoIP, CCTV, ERP…" maxlength="30">
+        <button class="add-chip-btn" onclick="addCategory()">Add</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Severity -->
+  <div class="settings-section">
+    <div class="settings-section-header">
+      <div class="settings-section-icon">🚦</div>
+      <div><div class="settings-section-title">Severity Levels</div><div class="settings-section-sub">Customise severity labels used in logs and reports</div></div>
+    </div>
+    <div class="settings-body">
+      <div class="sev-editor" id="sevEditor"></div>
+      <div class="add-chip-row">
+        <input class="add-chip-input" type="text" id="newSevInput" placeholder="e.g. Critical, Planned…" maxlength="20">
+        <button class="add-chip-btn" onclick="addSeverity()">Add</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Time Spent -->
+  <div class="settings-section">
+    <div class="settings-section-header">
+      <div class="settings-section-icon">⏱</div>
+      <div><div class="settings-section-title">Time Spent Options</div><div class="settings-section-sub">Edit the time options shown when logging a fix</div></div>
+    </div>
+    <div class="settings-body">
+      <div class="setting-chips" id="durChips"></div>
+      <div class="add-chip-row">
+        <input class="add-chip-input" type="text" id="newDurInput" placeholder="e.g. 45 min, 3 hours…" maxlength="15">
+        <button class="add-chip-btn" onclick="addDuration()">Add</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Company Branding / Report Template -->
+  <div class="settings-section">
+    <div class="settings-section-header">
+      <div class="settings-section-icon">🏢</div>
+      <div><div class="settings-section-title">Company &amp; Report Template</div><div class="settings-section-sub">Branding added to all PDF exports</div></div>
+    </div>
+    <div class="settings-body">
+      <div class="logo-upload-area" onclick="document.getElementById('logoFileInput').click()">
+        <img class="logo-preview" id="logoPreview" src="" alt="Logo">
+        <input type="file" id="logoFileInput" accept="image/*" onchange="handleLogoUpload(event)">
+        <div class="logo-upload-hint" id="logoUploadHint">📎 Tap to upload company logo<br><span>PNG, JPG, SVG — shown at top of PDF reports</span></div>
+      </div>
+      <div class="template-field">
+        <label>Company Name</label>
+        <input type="text" id="tplCompanyName" placeholder="e.g. Al Nawaz IT Solutions" oninput="saveTemplate()">
+      </div>
+      <div class="template-field">
+        <label>Tagline / Department</label>
+        <input type="text" id="tplTagline" placeholder="e.g. IT Support &amp; Infrastructure" oninput="saveTemplate()">
+      </div>
+      <div class="template-field">
+        <label>Contact / Email shown in report footer</label>
+        <input type="text" id="tplContact" placeholder="e.g. support@company.com | +971 50 000 0000" oninput="saveTemplate()">
+      </div>
+      <div class="template-field">
+        <label>Report Footer Note (optional)</label>
+        <textarea id="tplFooter" placeholder="e.g. This report is confidential and intended for management use only." oninput="saveTemplate()"></textarea>
+      </div>
+      <button class="save-btn" onclick="showToast('✓ Template saved')">Save Template</button>
+    </div>
+  </div>
+
+  <!-- Danger zone -->
+  <div class="settings-section" style="border-color:rgba(239,68,68,.2)">
+    <div class="settings-section-header">
+      <div class="settings-section-icon">⚠️</div>
+      <div><div class="settings-section-title">Data</div><div class="settings-section-sub">Manage your stored logs</div></div>
+    </div>
+    <div class="settings-body">
+      <button onclick="exportData()" class="share-btn" style="margin-bottom:0">📦 Export all data (JSON backup)</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ REPORT MODAL ══════════ -->
+<div class="modal-overlay" id="reportModal" onclick="closeReportModal(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="reportModalTitle">Report</div>
+      <button class="modal-close" onclick="closeReportModal()">×</button>
+    </div>
+    <!-- Professional HTML preview -->
+    <div class="report-preview" id="reportPreview"></div>
+    <div class="btn-row">
+      <button class="btn-sm btn-copy" onclick="copyReportText()">📋 Copy Text</button>
+      <button class="btn-sm btn-wa" onclick="shareReportWA()">📤 Share</button>
+      <button class="btn-sm btn-pdf" onclick="exportPDF()">⬇ Export PDF</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ DETAIL MODAL ══════════ -->
+<div class="modal-overlay" id="detailModal" onclick="closeDetailModal(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle"></div>
+      <button class="modal-close" onclick="closeDetailModal()">×</button>
+    </div>
+    <div id="modalBody"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════
+//  PERSISTENT STATE
+// ══════════════════════════════════
+let logs=[], clients=[], audioStore={};
+try{logs=JSON.parse(localStorage.getItem('fl_logs')||'[]');}catch(e){}
+try{clients=JSON.parse(localStorage.getItem('fl_clients')||'["MCE","Home User","No Client"]');}catch(e){clients=["MCE","Home User","No Client"];}
+try{audioStore=JSON.parse(localStorage.getItem('fl_audio')||'{}');}catch(e){}
+
+// Settings
+let categories=[], severities=[], durations=[];
+let tpl={companyName:'',tagline:'',contact:'',footer:'',logo:''};
+try{categories=JSON.parse(localStorage.getItem('fl_cats')||'null')||["Hardware","Network","Software","Email / M365","Printer","Access / Passwords","Server","Virus / Security","Other"];}catch(e){}
+try{severities=JSON.parse(localStorage.getItem('fl_sevs')||'null')||["Low","Medium","High"];}catch(e){}
+try{durations=JSON.parse(localStorage.getItem('fl_durs')||'null')||["5 min","15 min","30 min","1 hour","2+ hours"];}catch(e){}
+try{tpl=JSON.parse(localStorage.getItem('fl_tpl')||'{}')||tpl;}catch(e){}
+
+const CAT_ICONS={'Hardware':'🖥','Network':'🌐','Software':'💿','Email / M365':'📧','Printer':'🖨','Access / Passwords':'🔑','Server':'🗄','Virus / Security':'🛡','Other':'⚙','VoIP':'📞','CCTV':'📹','ERP':'🗂','Backup':'💾'};
+function catIcon(c){return CAT_ICONS[c]||'🔧';}
+
+// Log state
+let selCategory='', selSeverity='', selDuration='', activeFilter='All', expandedClient=null;
+// Dictation state
+let recognition=null, isListening=false;
+let mediaRecorder=null, audioChunks=[], isRecording=false;
+let dictateAudioBlob=null, dictateAudioURL=null, dictateAudio=null;
+let clientAudios={}, detailAudio=null;
+// Report state
+let currentReportData=null; // {type:'single'|'client'|'full', id?, client?}
+
+// ══════════════════════════════════
+//  INIT
+// ══════════════════════════════════
+function init(){
+  renderClientSelect();
+  renderCatGrid();
+  renderSevRow();
+  renderDurRow();
+  renderClientList();
+  updateTodayCount();
+  loadTemplateInputs();
+}
+init();
+
+// ══════════════════════════════════
+//  TABS
+// ══════════════════════════════════
+function switchTab(name){
+  const names=['log','history','stats','clients','settings'];
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',names[i]===name));
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+name).classList.add('active');
+  if(name==='history')renderHistory();
+  if(name==='stats')renderStats();
+  if(name==='clients')renderClientList();
+  if(name==='settings')renderSettingsPage();
+}
+
+// ══════════════════════════════════
+//  RENDER DYNAMIC LOG FORM
+// ══════════════════════════════════
+function renderCatGrid(){
+  document.getElementById('catGrid').innerHTML=categories.map(c=>
+    `<div class="tag${selCategory===c?' cat-selected':''}" onclick="selCat(this)" data-val="${c}">${catIcon(c)} ${c}</div>`
+  ).join('');
+}
+function renderSevRow(){
+  const colors={Low:'green',Medium:'warn',High:'red'};
+  document.getElementById('sevRow').innerHTML=severities.map(s=>
+    `<div class="sev-btn${selSeverity===s?' selected':''}" data-sev="${s}" onclick="selSev(this)">${s}</div>`
+  ).join('');
+}
+function renderDurRow(){
+  document.getElementById('durRow').innerHTML=durations.map(d=>
+    `<div class="dur-btn${selDuration===d?' selected':''}" onclick="selDur(this)" data-val="${d}">${d}</div>`
+  ).join('');
+}
+
+// ══════════════════════════════════
+//  SETTINGS PAGE RENDER
+// ══════════════════════════════════
+function renderSettingsPage(){
+  // Category chips
+  document.getElementById('catChips').innerHTML=categories.map((c,i)=>
+    `<div class="setting-chip">${catIcon(c)} ${c} <span class="chip-del" onclick="removeCat(${i})">×</span></div>`
+  ).join('');
+
+  // Severity editor
+  const sevColors=['#10b981','#f59e0b','#ef4444','#a78bfa','#00e5ff','#f97316'];
+  document.getElementById('sevEditor').innerHTML=severities.map((s,i)=>
+    `<div class="sev-edit-row">
+      <div class="sev-color-dot" style="background:${sevColors[i%sevColors.length]}"></div>
+      <input class="sev-edit-input" value="${s}" onchange="editSeverity(${i},this.value)">
+      <button class="sev-edit-del" onclick="removeSeverity(${i})">×</button>
+    </div>`
+  ).join('');
+
+  // Duration chips
+  document.getElementById('durChips').innerHTML=durations.map((d,i)=>
+    `<div class="setting-chip">⏱ ${d} <span class="chip-del" onclick="removeDuration(${i})">×</span></div>`
+  ).join('');
+
+  // Logo preview
+  if(tpl.logo){
+    document.getElementById('logoPreview').src=tpl.logo;
+    document.getElementById('logoPreview').classList.add('show');
+    document.getElementById('logoUploadHint').style.display='none';
+  }
+  loadTemplateInputs();
+}
+
+// ══════════════════════════════════
+//  SETTINGS — CATEGORIES
+// ══════════════════════════════════
+function addCategory(){
+  const val=document.getElementById('newCatInput').value.trim();
+  if(!val)return;
+  if(categories.includes(val)){showToast('Already exists');return;}
+  categories.push(val);
+  saveCats(); renderSettingsPage(); renderCatGrid();
+  document.getElementById('newCatInput').value='';
+  showToast(`✓ "${val}" added`);
+}
+function removeCat(i){
+  if(categories.length<=1){showToast('Need at least 1 category');return;}
+  categories.splice(i,1); saveCats(); renderSettingsPage(); renderCatGrid();
+}
+function saveCats(){localStorage.setItem('fl_cats',JSON.stringify(categories));}
+document.getElementById('newCatInput').addEventListener('keydown',e=>{if(e.key==='Enter')addCategory();});
+
+// ══════════════════════════════════
+//  SETTINGS — SEVERITY
+// ══════════════════════════════════
+function addSeverity(){
+  const val=document.getElementById('newSevInput').value.trim();
+  if(!val)return;
+  if(severities.includes(val)){showToast('Already exists');return;}
+  severities.push(val); saveSevs(); renderSettingsPage(); renderSevRow();
+  document.getElementById('newSevInput').value='';
+  showToast(`✓ "${val}" added`);
+}
+function removeSeverity(i){
+  if(severities.length<=1){showToast('Need at least 1 severity');return;}
+  severities.splice(i,1); saveSevs(); renderSettingsPage(); renderSevRow();
+}
+function editSeverity(i,val){
+  severities[i]=val; saveSevs(); renderSevRow();
+}
+function saveSevs(){localStorage.setItem('fl_sevs',JSON.stringify(severities));}
+document.getElementById('newSevInput').addEventListener('keydown',e=>{if(e.key==='Enter')addSeverity();});
+
+// ══════════════════════════════════
+//  SETTINGS — DURATION
+// ══════════════════════════════════
+function addDuration(){
+  const val=document.getElementById('newDurInput').value.trim();
+  if(!val)return;
+  if(durations.includes(val)){showToast('Already exists');return;}
+  durations.push(val); saveDurs(); renderSettingsPage(); renderDurRow();
+  document.getElementById('newDurInput').value='';
+  showToast(`✓ "${val}" added`);
+}
+function removeDuration(i){
+  if(durations.length<=1){showToast('Need at least 1 option');return;}
+  durations.splice(i,1); saveDurs(); renderSettingsPage(); renderDurRow();
+}
+function saveDurs(){localStorage.setItem('fl_durs',JSON.stringify(durations));}
+document.getElementById('newDurInput').addEventListener('keydown',e=>{if(e.key==='Enter')addDuration();});
+
+// ══════════════════════════════════
+//  SETTINGS — LOGO + TEMPLATE
+// ══════════════════════════════════
+function handleLogoUpload(e){
+  const file=e.target.files[0]; if(!file)return;
+  const reader=new FileReader();
+  reader.onload=r=>{
+    tpl.logo=r.result;
+    document.getElementById('logoPreview').src=r.result;
+    document.getElementById('logoPreview').classList.add('show');
+    document.getElementById('logoUploadHint').style.display='none';
+    saveTemplate(); showToast('✓ Logo uploaded');
+  };
+  reader.readAsDataURL(file);
+}
+function loadTemplateInputs(){
+  document.getElementById('tplCompanyName').value=tpl.companyName||'';
+  document.getElementById('tplTagline').value=tpl.tagline||'';
+  document.getElementById('tplContact').value=tpl.contact||'';
+  document.getElementById('tplFooter').value=tpl.footer||'';
+}
+function saveTemplate(){
+  tpl.companyName=document.getElementById('tplCompanyName').value;
+  tpl.tagline=document.getElementById('tplTagline').value;
+  tpl.contact=document.getElementById('tplContact').value;
+  tpl.footer=document.getElementById('tplFooter').value;
+  localStorage.setItem('fl_tpl',JSON.stringify(tpl));
+}
+
+// ══════════════════════════════════
+//  DICTATE (speech + audio unified)
+// ══════════════════════════════════
+function toggleDictate(){
+  if(isListening){ stopDictate(); return; }
+  startDictate();
+}
+
+function startDictate(){
+  var ta = document.getElementById('issueDesc');
+
+  // Detect environment
+  var isCapacitor = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+  var isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+  if(isCapacitor){
+    // ── NATIVE APK: Use Capacitor SpeechRecognition plugin ────────────────
+    startCapacitorSR(ta);
+  } else if(isMobile){
+    // ── MOBILE BROWSER/PWA: Use keyboard mic (browser SR blocked on Android)
+    ta.focus();
+    setTimeout(function(){
+      ta.scrollIntoView({behavior:'smooth', block:'center'});
+    }, 300);
+    showMobileVoiceGuide();
+  } else {
+    // ── DESKTOP BROWSER: webkitSpeechRecognition works fine ───────────────
+    var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if(!SR){
+      ta.focus();
+      setStatus('Type your notes or use your keyboard mic button','');
+      return;
+    }
+    isListening = true;
+    document.getElementById('dictateBtn').classList.add('active');
+    document.getElementById('dictateBtnLabel').textContent = 'Listening…';
+    setStatus('🔴 Listening — speak now','recording');
+    doStartSR(ta, SR, ta.value, 0);
+  }
+}
+
+// ── CAPACITOR NATIVE SPEECH ───────────────────────────────────────────────
+// Uses @capacitor/speech-recognition plugin — full Android native SR
+// Continuous, no keyboard needed, same Google speech engine as Assistant
+function startCapacitorSR(ta){
+  var SR = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.SpeechRecognition;
+  if(!SR){
+    // Fallback if plugin not loaded yet
+    setStatus('Loading speech engine…','');
+    setTimeout(function(){ startCapacitorSR(ta); }, 500);
+    return;
+  }
+
+  isListening = true;
+  document.getElementById('dictateBtn').classList.add('active');
+  document.getElementById('dictateBtnLabel').textContent = 'Listening… tap to stop';
+  setStatus('🔴 Listening — speak now','recording');
+
+  var accumulated = ta.value;
+
+  // Request permission first
+  SR.requestPermission().then(function(result){
+    if(result.permission !== 'granted'){
+      isListening = false;
+      document.getElementById('dictateBtn').classList.remove('active');
+      document.getElementById('dictateBtnLabel').textContent = 'Tap to Speak';
+      setStatus('Mic permission denied — check phone Settings','');
+      showMicDeniedGuide();
+      return;
+    }
+
+    // Start listening
+    SR.start({
+      language: 'en-US',
+      maxResults: 1,
+      partialResults: true,
+      popup: false
+    }).catch(function(e){
+      setStatus('Could not start mic — try again','');
+      isListening = false;
+      document.getElementById('dictateBtn').classList.remove('active');
+      document.getElementById('dictateBtnLabel').textContent = 'Tap to Speak';
+    });
+
+    // Listen for partial results (words as you speak)
+    if(window._srPartialListener) window._srPartialListener.remove();
+    window._srPartialListener = SR.addListener('partialResults', function(data){
+      if(data && data.matches && data.matches[0]){
+        ta.value = (accumulated + data.matches[0]).trimStart();
+        ta.style.height = 'auto';
+        ta.style.height = Math.min(ta.scrollHeight, 280) + 'px';
+      }
+    });
+
+    // Listen for final result
+    if(window._srFinalListener) window._srFinalListener.remove();
+    window._srFinalListener = SR.addListener('listeningState', function(data){
+      if(data.status === 'stopped' && isListening){
+        // Android stopped SR (silence/timeout) — get final text and restart
+        SR.stop().then(function(result){
+          if(result && result.matches && result.matches[0]){
+            accumulated = (accumulated + result.matches[0] + ' ').trimStart();
+            ta.value = accumulated;
+          }
+          // Restart after short pause
+          setTimeout(function(){
+            if(isListening) startCapacitorSR(ta);
+          }, 400);
+        }).catch(function(){
+          if(isListening){
+            setTimeout(function(){ startCapacitorSR(ta); }, 400);
+          }
+        });
+      }
+    });
+
+  }).catch(function(e){
+    isListening = false;
+    document.getElementById('dictateBtn').classList.remove('active');
+    document.getElementById('dictateBtnLabel').textContent = 'Tap to Speak';
+    setStatus('Mic error — try again','');
+  });
+}
+
+// ── DESKTOP: webkitSpeechRecognition ────────────────────────────────────────
+function doStartSR(ta, SR, accumulated, restartCount){
+  var rec = new SR();
+  rec.continuous = false;
+  rec.interimResults = true;
+  rec.lang = 'en-US';
+  rec.maxAlternatives = 1;
+  recognition = rec;
+
+  rec.onstart = function(){
+    document.getElementById('dictateBtnLabel').textContent = 'Listening… tap to stop';
+    setStatus('🔴 Listening — speak now','recording');
+  };
+
+  rec.onresult = function(e){
+    var interim = '';
+    for(var i = e.resultIndex; i < e.results.length; i++){
+      if(e.results[i].isFinal) accumulated += e.results[i][0].transcript + ' ';
+      else interim = e.results[i][0].transcript;
+    }
+    ta.value = (accumulated + interim).trimStart();
+    ta.style.height = 'auto';
+    ta.style.height = Math.min(ta.scrollHeight, 280) + 'px';
+  };
+
+  rec.onerror = function(e){
+    if(e.error === 'aborted' || e.error === 'no-speech') return;
+    if(e.error === 'not-allowed'){
+      isListening = false;
+      document.getElementById('dictateBtn').classList.remove('active');
+      document.getElementById('dictateBtnLabel').textContent = 'Tap to Speak';
+      setStatus('Mic blocked — check browser permissions','');
+      showMicDeniedGuide();
+    }
+  };
+
+  rec.onend = function(){
+    recognition = null;
+    if(!isListening) return;
+    setStatus('🟡 Keep speaking…','recording');
+    setTimeout(function(){
+      if(!isListening) return;
+      if(restartCount < 50) doStartSR(ta, SR, accumulated, restartCount + 1);
+      else stopDictate();
+    }, 300);
+  };
+
+  try{ rec.start(); }
+  catch(ex){
+    isListening = false;
+    document.getElementById('dictateBtn').classList.remove('active');
+    document.getElementById('dictateBtnLabel').textContent = 'Tap to Speak';
+    setStatus('Could not start mic — try again','');
+  }
+}
+
+function stopDictate(){
+  isListening = false;
+
+  // Stop Capacitor SR if running
+  var SR = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.SpeechRecognition;
+  if(SR){
+    try{
+      SR.stop().catch(function(){});
+    }catch(e){}
+    if(window._srPartialListener){ try{window._srPartialListener.remove();}catch(e){} window._srPartialListener = null; }
+    if(window._srFinalListener){ try{window._srFinalListener.remove();}catch(e){} window._srFinalListener = null; }
+  }
+
+  // Stop desktop SR if running
+  if(recognition){
+    recognition.onend = null;
+    recognition.onerror = null;
+    try{ recognition.abort(); }catch(e){}
+    recognition = null;
+  }
+
+  document.getElementById('dictateBtn').classList.remove('active');
+  document.getElementById('dictateBtnLabel').textContent = 'Tap to Speak';
+  var ta = document.getElementById('issueDesc');
+  setStatus(
+    ta.value.trim() ? '✓ Done — tap Save to log this fix' : 'Tap to speak (desktop) or keyboard 🎤 (browser)',
+    ta.value.trim() ? 'saved' : ''
+  );
+}
+
+function showMobileVoiceGuide(){
+  // Only show once — after that, just focus the textarea
+  if(localStorage.getItem('fl_voice_guide_seen')){
+    setStatus('Tap the 🎤 mic on your keyboard to speak','');
+    return;
+  }
+
+  var g = document.createElement('div');
+  g.id = 'mobileVoiceGuide';
+  g.setAttribute('style',
+    'position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:9999;'+
+    'display:flex;align-items:flex-end;justify-content:center;padding:20px;'
+  );
+  g.innerHTML =
+    '<div style="background:#111118;border:1px solid #2a2a3a;border-radius:16px;'+
+    'padding:24px;max-width:400px;width:100%;font-family:sans-serif;">'+
+    '<div style="font-size:36px;text-align:center;margin-bottom:14px;">⌨️🎤</div>'+
+    '<div style="font-size:17px;font-weight:700;color:#e8e8f0;margin-bottom:10px;text-align:center;">'+
+    'How to use voice on Android'+
+    '</div>'+
+    '<div style="font-size:13px;color:#8888aa;line-height:1.9;margin-bottom:20px;">'+
+    'Android restricts browser speech in apps. Use your keyboard mic instead — '+
+    'it&#39;s the same Google voice recognition and works perfectly.<br><br>'+
+    '<div style="background:#18181f;border-radius:10px;padding:14px;border:1px solid #2a2a3a;">'+
+    '<div style="color:#e8e8f0;font-weight:600;margin-bottom:8px;">3 steps:</div>'+
+    '<div style="margin-bottom:6px;">1️⃣ &nbsp;Tap the text box below</div>'+
+    '<div style="margin-bottom:6px;">2️⃣ &nbsp;Your keyboard opens — tap the <b style="color:#00e5ff">🎤 mic key</b></div>'+
+    '<div>3️⃣ &nbsp;Speak — text appears automatically</div>'+
+    '</div><br>'+
+    '<span style="color:#44445a;font-size:11px;">'+
+    'The mic key is usually bottom-left or bottom-right of your keyboard.'+
+    '</span>'+
+    '</div>'+
+    '<button onclick="closeMobileVoiceGuide()" '+
+    'style="width:100%;padding:13px;background:#00e5ff;color:#000;border:none;'+
+    'border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;">'+
+    'Got it — open text box'+
+    '</button>'+
+    '</div>';
+  document.body.appendChild(g);
+}
+
+function closeMobileVoiceGuide(){
+  localStorage.setItem('fl_voice_guide_seen','1');
+  var g = document.getElementById('mobileVoiceGuide');
+  if(g) g.remove();
+  // Focus the textarea after guide closes
+  setTimeout(function(){
+    var ta = document.getElementById('issueDesc');
+    ta.focus();
+    setStatus('Tap the 🎤 mic on your keyboard to speak','');
+    document.getElementById('dictateBtnLabel').textContent = 'Tap to Speak';
+  }, 100);
+}
+
+function showMicDeniedGuide(){
+  if(document.getElementById('micGuide')) return;
+  var g = document.createElement('div');
+  g.id = 'micGuide';
+  g.setAttribute('style',
+    'position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;'+
+    'display:flex;align-items:flex-end;justify-content:center;padding:20px;'
+  );
+  g.innerHTML =
+    '<div style="background:#111118;border:1px solid #2a2a3a;border-radius:16px;'+
+    'padding:24px;max-width:400px;width:100%;font-family:sans-serif;">'+
+    '<div style="font-size:32px;margin-bottom:12px;">🎤</div>'+
+    '<div style="font-size:16px;font-weight:700;color:#e8e8f0;margin-bottom:10px;">Mic Blocked</div>'+
+    '<div style="font-size:13px;color:#8888aa;line-height:1.7;margin-bottom:18px;">'+
+    '<b style="color:#e8e8f0">Quick fix in Chrome:</b><br>'+
+    '1. Tap the 🔒 lock icon in the address bar<br>'+
+    '2. Tap <b style="color:#00e5ff">Site settings</b><br>'+
+    '3. Tap <b style="color:#00e5ff">Microphone → Allow</b><br>'+
+    '4. Reload and try again'+
+    '</div>'+
+    '<button onclick="closeMicGuide()" '+
+    'style="width:100%;padding:13px;background:#00e5ff;color:#000;border:none;'+
+    'border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;">Got it</button>'+
+    '</div>';
+  document.body.appendChild(g);
+}
+
+function closeMicGuide(){
+  var g = document.getElementById('micGuide');
+  if(g) g.remove();
+}
+
+function stopDictate(){
+  isListening = false;
+
+  // Stop speech recognition
+  if(recognition){
+    recognition.onend = null; // prevent auto-restart loop
+    try{ recognition.stop(); }catch(e){}
+    recognition = null;
+  }
+
+  // Stop MediaRecorder — this triggers onstop which saves the blob
+  if(mediaRecorder && isRecording){
+    try{ mediaRecorder.stop(); }catch(e){}
+    isRecording = false;
+  }
+
+  // Release the shared mic stream — MUST happen after recorder stops
+  setTimeout(function(){
+    if(window._dictateStream){
+      window._dictateStream.getTracks().forEach(function(t){ t.stop(); });
+      window._dictateStream = null;
+    }
+  }, 500);
+
+  document.getElementById('dictateBtn').classList.remove('active');
+  document.getElementById('dictateBtnLabel').textContent = 'Tap to Speak';
+  var ta = document.getElementById('issueDesc');
+  setStatus(
+    ta.value.trim() ? '✓ Done — tap Save to log this fix' : 'Dictate — transcript & audio saved together',
+    ta.value.trim() ? 'saved' : ''
+  );
+}
+function setStatus(m,c){const el=document.getElementById('dictateStatus');el.textContent=m;el.className='dictate-status'+(c?' '+c:'');}
+function playDictateAudio(){
+  if(!dictateAudioURL)return;
+  if(dictateAudio){dictateAudio.pause();dictateAudio=null;document.getElementById('asbPlayBtn').textContent='▶';return;}
+  dictateAudio=new Audio(dictateAudioURL);dictateAudio.play();document.getElementById('asbPlayBtn').textContent='⏹';
+  dictateAudio.onended=()=>{dictateAudio=null;document.getElementById('asbPlayBtn').textContent='▶';};
+}
+function clearDictation(){
+  dictateAudioBlob=null;dictateAudioURL=null;if(dictateAudio){dictateAudio.pause();dictateAudio=null;}
+  document.getElementById('audioSavedBar').classList.remove('show');
+  document.getElementById('issueDesc').value='';
+  setStatus('Dictate — transcript & audio saved together','');
+}
+
+// ══════════════════════════════════
+//  SELECTIONS
+// ══════════════════════════════════
+function selCat(el){document.querySelectorAll('#catGrid .tag').forEach(t=>t.classList.remove('cat-selected'));el.classList.add('cat-selected');selCategory=el.dataset.val;}
+function selSev(el){document.querySelectorAll('#sevRow .sev-btn').forEach(b=>b.classList.remove('selected'));el.classList.add('selected');selSeverity=el.dataset.sev;}
+function selDur(el){document.querySelectorAll('#durRow .dur-btn').forEach(b=>b.classList.remove('selected'));el.classList.add('selected');selDuration=el.dataset.val;}
+
+// ══════════════════════════════════
+//  SAVE LOG
+// ══════════════════════════════════
+function blobToBase64(blob){return new Promise(res=>{const r=new FileReader();r.onloadend=()=>res(r.result);r.readAsDataURL(blob);});}
+async function saveLog(){
+  const client=document.getElementById('logClient').value;
+  const desc=document.getElementById('issueDesc').value.trim();
+  if(!client){showToast('Please select a client');return;}
+  if(!desc){showToast('Please describe the issue');return;}
+  const id=Date.now();
+  const parsed=parseTranscript(desc);
+  const entry={id,client,desc,category:selCategory||categories[0]||'Other',severity:selSeverity||severities[0]||'Medium',duration:selDuration||'—',timestamp:new Date().toISOString(),hasAudio:!!dictateAudioBlob,parsedUser:parsed.user,parsedIssue:parsed.issue,parsedFix:parsed.fix,parsedObject:parsed.object};
+  if(dictateAudioBlob){
+    try{const b64=await blobToBase64(dictateAudioBlob);audioStore[id]=b64;localStorage.setItem('fl_audio',JSON.stringify(audioStore));}catch(e){entry.hasAudio=false;}
+  }
+  logs.unshift(entry);
+  localStorage.setItem('fl_logs',JSON.stringify(logs));
+  updateTodayCount();
+  document.getElementById('issueDesc').value='';
+  document.getElementById('logClient').value='';
+  document.querySelectorAll('.tag,.sev-btn,.dur-btn').forEach(el=>el.classList.remove('selected','cat-selected'));
+  selCategory='';selSeverity='';selDuration='';
+  dictateAudioBlob=null;dictateAudioURL=null;
+  if(dictateAudio){dictateAudio.pause();dictateAudio=null;}
+  document.getElementById('audioSavedBar').classList.remove('show');
+  setStatus('Dictate — transcript & audio saved together','');
+  showToast('✓ Fix logged'+(entry.hasAudio?' with audio':'')+'!');
+}
+
+// ══════════════════════════════════
+//  SMART TRANSCRIPT PARSER
+// ══════════════════════════════════
+function parseTranscript(text){
+  const t=text.trim();
+  let user='',issue='',fix='',object='';
+  // Name extraction
+  let m;
+  m=t.match(/\bfor\s+([A-Z][a-z]{1,20}(?:\s[A-Z][a-z]{1,20})?)\b/);if(m)user=m[1];
+  if(!user){m=t.match(/\b([A-Z][a-z]{1,20}(?:\s[A-Z][a-z]{1,20})?)'s?\s+\w/);if(m)user=m[1];}
+  if(!user){m=t.match(/\b(?:fixed|helped|assisted|supported|resolved|sorted|visited)\s+([A-Z][a-z]{1,20}(?:\s[A-Z][a-z]{1,20})?)\b/i);if(m)user=m[1];}
+  if(!user){m=t.match(/\b(?:password|account|access)\s+(?:for|of)\s+([A-Z][a-z]{1,20})\b/i);if(m)user=m[1];}
+  if(!user){m=t.match(/^([A-Z][a-z]{1,20}(?:\s[A-Z][a-z]{1,20})?)\s+(?:called|reported|had|was|couldn)/);if(m)user=m[1];}
+  if(!user){
+    const skip=new Set(['The','This','Fixed','Issue','Problem','Error','Network','Outlook','Email','Printer','Server','Virus','Access','Windows','Office','Teams','Laptop','Desktop','Phone','Reset','Clear','Install','Update','Restart','Sophos','Microsoft','Google','Apple']);
+    const words=t.match(/\b[A-Z][a-z]{2,15}\b/g)||[];
+    for(const w of words){if(!skip.has(w)){user=w;break;}}
+  }
+  // Object/device
+  m=t.match(/\b(Outlook|Teams|OneDrive|SharePoint|Word|Excel|PowerPoint|Office|M365|Windows|MacOS|Chrome|Firefox|Edge|Sophos|laptop|desktop|PC|computer|printer|scanner|server|router|switch|WiFi|VPN|phone|iPhone|Android|monitor|keyboard|mouse|projector)\b/i);
+  if(m)object=m[1];
+  // Issue vs Fix split
+  const fixVerbs=/\b(fixed|resolved|cleared|restarted|reinstalled|reset|updated|installed|removed|replaced|configured|repaired|cleaned|deleted|rebuilt|re-entered|reconnected|enabled|disabled|ran|applied|rebooted|patched|upgraded|created|migrated)\b/i;
+  const sentences=t.split(/[,.\n;]/).map(s=>s.trim()).filter(Boolean);
+  if(sentences.length===1){
+    const fi=t.search(fixVerbs);
+    if(fi>10){issue=t.slice(0,fi).trim();fix=t.slice(fi).trim();}
+    else{issue=t;fix='';}
+  } else {
+    let splitIdx=sentences.length;
+    for(let i=0;i<sentences.length;i++){if(fixVerbs.test(sentences[i])){splitIdx=i;break;}}
+    if(splitIdx===0)splitIdx=1;
+    issue=sentences.slice(0,splitIdx).join(', ');
+    fix=sentences.slice(splitIdx).join(', ');
+  }
+  issue=issue.replace(/^(fixed|helped|assisted|sorted|resolved)\s+/i,'').trim();
+  if(!fix)fix='Issue resolved on-site';
+  if(!issue)issue=t;
+  const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
+  return{user:user||'Unknown',issue:cap(issue),fix:cap(fix),object:object||''};
+}
+
+// ══════════════════════════════════
+//  HISTORY
+// ══════════════════════════════════
+function setFilter(f,el){activeFilter=f;document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));el.classList.add('active');renderHistory();}
+function isRecurring(log){return logs.filter(l=>l.id!==log.id&&l.client===log.client&&l.category===log.category).length>=2;}
+function renderHistory(){
+  const q=document.getElementById('searchInput').value.toLowerCase();
+  const now=new Date(),todayStr=now.toDateString(),weekAgo=new Date(now-7*86400000);
+  const filtered=logs.filter(l=>{
+    const d=new Date(l.timestamp);
+    if(activeFilter==='Today'&&d.toDateString()!==todayStr)return false;
+    if(activeFilter==='This Week'&&d<weekAgo)return false;
+    if(activeFilter==='High'&&l.severity!==severities[severities.length-1])return false;
+    if(activeFilter==='Recurring'&&!isRecurring(l))return false;
+    if(activeFilter==='Has Audio'&&!l.hasAudio)return false;
+    if(q&&!`${l.client} ${l.desc} ${l.category}`.toLowerCase().includes(q))return false;
+    return true;
+  });
+  const el=document.getElementById('logList');
+  if(!filtered.length){el.innerHTML='<div class="empty-state"><div class="empty-icon">🔍</div>No entries found</div>';return;}
+  el.innerHTML=filtered.map(l=>cardHTML(l)).join('');
+}
+function cardHTML(l){
+  const d=new Date(l.timestamp);
+  const ts=d.toLocaleDateString('en-GB',{day:'2-digit',month:'short'})+' '+d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+  const rec=isRecurring(l);
+  return `<div class="log-card${rec?' repeat':''}" onclick="openDetail(${l.id})">
+    <div class="card-top"><div class="card-client">${l.client}</div><div class="card-time">${ts}</div></div>
+    <div class="card-desc">${l.desc.length>100?l.desc.slice(0,100)+'…':l.desc}</div>
+    <div class="card-tags">
+      <span class="ctag cat">${l.category}</span>
+      <span class="ctag dur">⏱ ${l.duration}</span>
+      <span class="ctag sev-${l.severity}">${l.severity}</span>
+      ${l.hasAudio?'<span class="ctag has-audio">🎙</span>':''}
+      ${rec?'<span class="repeat-badge">⚠ Recurring</span>':''}
+    </div>
+    <div class="card-actions">
+      <div class="card-act-btn" onclick="event.stopPropagation();openSingleReport(${l.id})">📄 Report</div>
+      <div class="card-act-btn" onclick="event.stopPropagation();copyEntryText(${l.id})">📋 Copy</div>
+      <div class="card-act-btn" onclick="event.stopPropagation();shareEntryWA(${l.id})">📱 Share</div>
+      <div class="card-act-btn del" onclick="event.stopPropagation();deleteEntry(${l.id})">🗑</div>
+    </div>
+  </div>`;
+}
+function deleteEntry(id){
+  if(!confirm('Delete this log entry?'))return;
+  logs=logs.filter(l=>l.id!==id);delete audioStore[id];
+  localStorage.setItem('fl_logs',JSON.stringify(logs));
+  localStorage.setItem('fl_audio',JSON.stringify(audioStore));
+  updateTodayCount();renderHistory();
+  if(expandedClient)renderClientList();
+}
+function copyEntryText(id){const l=logs.find(x=>x.id===id);if(!l)return;navigator.clipboard.writeText(buildPlainText(l)).then(()=>showToast('Copied!'));}
+function shareEntryWA(id){
+  var l=logs.find(function(x){return x.id===id;});
+  if(!l)return;
+  var d=new Date(l.timestamp);
+  var titleStr=l.client+' — Report '+d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+  var reportHTML=buildReportHTML(
+    l.client,
+    'Single Issue Report · '+d.toLocaleDateString('en-GB',{day:'2-digit',month:'long',year:'numeric'}),
+    [l], {}
+  );
+  shareReportAsFile(titleStr, reportHTML);
+}
+
+// ══════════════════════════════════
+//  DETAIL MODAL
+// ══════════════════════════════════
+function openDetail(id){
+  const l=logs.find(x=>x.id===id);if(!l)return;
+  const d=new Date(l.timestamp);
+  const p={parsedUser:l.parsedUser||'Unknown',parsedIssue:l.parsedIssue||l.desc,parsedFix:l.parsedFix||'Resolved',parsedObject:l.parsedObject||''};
+  const audioHTML=l.hasAudio&&audioStore[id]?`<div class="modal-field"><label>Voice Recording</label>
+    <div style="display:flex;align-items:center;gap:8px;background:rgba(16,185,129,.07);border:1px solid rgba(16,185,129,.2);border-radius:8px;padding:9px 12px;">
+      <button style="width:26px;height:26px;border-radius:50%;background:var(--green);border:none;color:#000;cursor:pointer;font-size:11px;" onclick="playDetailAudio('${id}',this)">▶</button>
+      <span style="font-size:11px;color:var(--green);font-family:var(--mono);">Tap to play original recording</span>
+    </div></div>`:'';
+  document.getElementById('modalTitle').textContent=l.client;
+  document.getElementById('modalBody').innerHTML=`
+    <div class="modal-field"><label>Date & Time</label><div style="color:var(--t2);font-size:14px">${d.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'})} — ${d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})}</div></div>
+    <div class="modal-field"><label>Detected</label><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">
+      <span style="background:rgba(0,229,255,.1);border:1px solid rgba(0,229,255,.3);color:var(--accent);font-size:11px;padding:3px 9px;border-radius:12px;font-family:var(--mono)">👤 ${p.parsedUser}</span>
+      ${p.parsedObject?`<span style="background:rgba(167,139,250,.1);border:1px solid rgba(167,139,250,.3);color:var(--purple);font-size:11px;padding:3px 9px;border-radius:12px;font-family:var(--mono)">🖥 ${p.parsedObject}</span>`:''}
+      <span class="ctag cat">${l.category}</span><span class="ctag sev-${l.severity}">${l.severity}</span>
+    </div></div>
+    <div class="modal-field"><label>Issue</label><div style="background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.15);border-radius:8px;padding:10px;font-size:13px;color:var(--t2);line-height:1.5">${p.parsedIssue}</div></div>
+    <div class="modal-field"><label>Fix Applied</label><div style="background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.15);border-radius:8px;padding:10px;font-size:13px;color:var(--t2);line-height:1.5">${p.parsedFix}</div></div>
+    <div class="modal-field"><label>Full Transcript</label><div style="background:var(--s2);border-radius:8px;padding:10px;font-size:13px;color:var(--t3);line-height:1.55">${l.desc}</div></div>
+    ${audioHTML}
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="save-btn" style="font-size:13px" onclick="openSingleReport(${l.id});closeDetailModal()">📄 Full Report</button>
+      <button class="save-btn" style="background:var(--green);font-size:13px" onclick="shareEntryWA(${l.id})">📱 Share</button>
+    </div>`;
+  document.getElementById('detailModal').classList.add('open');
+}
+function playDetailAudio(id,btn){
+  if(detailAudio){detailAudio.pause();detailAudio=null;btn.textContent='▶';return;}
+  const b64=audioStore[id];if(!b64)return;
+  detailAudio=new Audio(b64);detailAudio.play();btn.textContent='⏹';
+  detailAudio.onended=()=>{detailAudio=null;btn.textContent='▶';};
+}
+function closeDetailModal(e){
+  if(!e||e.target===document.getElementById('detailModal')){
+    document.getElementById('detailModal').classList.remove('open');
+    if(detailAudio){detailAudio.pause();detailAudio=null;}
+  }
+}
+
+// ══════════════════════════════════
+//  CLIENTS
+// ══════════════════════════════════
+function renderClientList(){
+  const el=document.getElementById('clientList');
+  if(!clients.length){el.innerHTML='<div class="empty-state"><div class="empty-icon">👥</div>No clients yet</div>';return;}
+  const counts={};logs.forEach(l=>counts[l.client]=(counts[l.client]||0)+1);
+  el.innerHTML=clients.map(c=>`
+    <div class="client-card">
+      <div class="client-card-header${expandedClient===c?' open':''}" onclick="toggleClient('${escQ(c)}')">
+        <div><div class="client-name">${c}</div><div class="client-subtext">${counts[c]||0} log entries · tap to expand</div></div>
+        <div class="client-meta">
+          <button class="client-report-btn" onclick="event.stopPropagation();openClientReport('${escQ(c)}')">📄 Report</button>
+          <span class="client-chevron${expandedClient===c?' open':''}">▼</span>
+          <button class="client-del-btn" onclick="event.stopPropagation();removeClient('${escQ(c)}')">×</button>
+        </div>
+      </div>
+      <div class="client-history${expandedClient===c?' open':''}">
+        ${renderClientHistory(c)}
+      </div>
+    </div>`).join('');
+}
+function escQ(s){return s.replace(/\\/g,'\\\\').replace(/'/g,"\\'");}
+function toggleClient(name){expandedClient=expandedClient===name?null:name;renderClientList();}
+function renderClientHistory(client){
+  const clogs=logs.filter(l=>l.client===client);
+  if(!clogs.length)return'<div class="client-hist-empty">No logs yet</div>';
+  return clogs.map(l=>{
+    const d=new Date(l.timestamp);
+    const ds=d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})+' '+d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+    const p={parsedUser:l.parsedUser||'',parsedObject:l.parsedObject||''};
+    const audioHTML=l.hasAudio&&audioStore[l.id]?`<div class="cli-audio-bar"><button class="cli-play-btn" onclick="playClientAudio(${l.id},this)">▶</button><span class="cli-audio-label">🎙 Voice recording</span></div>`:'';
+    return`<div class="client-log-item">
+      <div class="cli-log-top"><div class="cli-log-date">📅 ${ds}</div><div class="cli-log-tags"><span class="ctag cat">${l.category}</span><span class="ctag sev-${l.severity}">${l.severity}</span>${l.hasAudio?'<span class="ctag has-audio">🎙</span>':''}</div></div>
+      ${p.parsedUser&&p.parsedUser!=='Unknown'?`<div style="margin-bottom:8px;display:flex;gap:6px;flex-wrap:wrap"><span style="font-size:11px;background:rgba(0,229,255,.08);border:1px solid rgba(0,229,255,.2);color:var(--accent);padding:2px 8px;border-radius:10px;font-family:var(--mono)">👤 ${p.parsedUser}</span>${p.parsedObject?`<span style="font-size:11px;background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.2);color:var(--purple);padding:2px 8px;border-radius:10px;font-family:var(--mono)">🖥 ${p.parsedObject}</span>`:''}</div>`:''}
+      <div class="cli-transcript-label">Transcript</div>
+      <div class="cli-log-transcript">${l.desc}</div>
+      ${audioHTML}
+      <div class="cli-log-actions">
+        <div class="cli-act-btn rpt" onclick="openSingleReport(${l.id})">📄 Report</div>
+        <div class="cli-act-btn" onclick="copyEntryText(${l.id})">📋 Copy</div>
+        <div class="cli-act-btn" onclick="shareEntryWA(${l.id})">📱 Share</div>
+        <div class="cli-act-btn del" onclick="deleteEntry(${l.id})">🗑 Del</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+function playClientAudio(id,btn){
+  if(clientAudios[id]){clientAudios[id].pause();delete clientAudios[id];btn.textContent='▶';return;}
+  const b64=audioStore[id];if(!b64)return;
+  const a=new Audio(b64);clientAudios[id]=a;a.play();btn.textContent='⏹';
+  a.onended=()=>{delete clientAudios[id];btn.textContent='▶';};
+}
+function addClient(){
+  const name=document.getElementById('newClientName').value.trim();
+  if(!name)return;if(clients.includes(name)){showToast('Already exists');return;}
+  clients.push(name);localStorage.setItem('fl_clients',JSON.stringify(clients));
+  document.getElementById('newClientName').value='';renderClientSelect();renderClientList();showToast(`✓ ${name} added`);
+}
+function removeClient(name){
+  if(!confirm(`Remove "${name}"?`))return;
+  clients=clients.filter(c=>c!==name);if(expandedClient===name)expandedClient=null;
+  localStorage.setItem('fl_clients',JSON.stringify(clients));renderClientSelect();renderClientList();
+}
+function renderClientSelect(){
+  const sel=document.getElementById('logClient'),cur=sel.value;
+  sel.innerHTML='<option value="">— Select client —</option>'+clients.map(c=>`<option value="${c}"${c===cur?' selected':''}>${c}</option>`).join('');
+}
+document.getElementById('newClientName').addEventListener('keydown',e=>{if(e.key==='Enter')addClient();});
+
+// ══════════════════════════════════
+//  PROFESSIONAL HTML REPORT BUILDER
+// ══════════════════════════════════
+function buildReportHTML(title, subtitle, items, summaryStats){
+  const now=new Date();
+  const logoHTML=tpl.logo?`<img class="rp-logo-img show" src="${tpl.logo}" alt="Logo">`:'';
+  const company=tpl.companyName||'IT Support';
+  const tagline=tpl.tagline||'';
+  const contact=tpl.contact||'';
+  const footerNote=tpl.footer||'This report is generated automatically by FixLog.';
+  const toMins=d=>({'5 min':5,'15 min':15,'30 min':30,'1 hour':60,'2+ hours':120,'—':0}[d]||0);
+  const totalMins=items.reduce((s,l)=>s+toMins(l.duration),0);
+  const hrs=Math.floor(totalMins/60),mins=totalMins%60;
+  const timeStr=hrs>0?`${hrs}h ${mins>0?mins+'m':''}`:(mins>0?`${mins}m`:'—');
+  const highCount=items.filter(l=>l.severity===severities[severities.length-1]).length;
+
+  const summaryCards=`
+    <div class="rp-summary-card"><div class="rp-summary-num">${items.length}</div><div class="rp-summary-label">Total Issues</div></div>
+    <div class="rp-summary-card"><div class="rp-summary-num">${timeStr}</div><div class="rp-summary-label">Time Spent</div></div>
+    <div class="rp-summary-card"><div class="rp-summary-num">${highCount}</div><div class="rp-summary-label">High Severity</div></div>`;
+
+  const issueCards=items.map((l,i)=>{
+    const d=new Date(l.timestamp);
+    const p={parsedUser:l.parsedUser||'Unknown',parsedIssue:l.parsedIssue||l.desc,parsedFix:l.parsedFix||'Resolved',parsedObject:l.parsedObject||''};
+    return`<div class="rp-issue-card">
+      <div class="rp-issue-top">
+        <span class="rp-issue-num">#${String(i+1).padStart(2,'0')}</span>
+        <span class="rp-issue-date">${d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})} · ${d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})}</span>
+      </div>
+      <div class="rp-issue-badges">
+        <span class="rp-badge user">👤 ${p.parsedUser}</span>
+        ${p.parsedObject?`<span class="rp-badge cat">🖥 ${p.parsedObject}</span>`:''}
+        <span class="rp-badge cat">${l.category}</span>
+        <span class="rp-badge sev-${l.severity}">${l.severity}</span>
+        <span class="rp-badge dur">⏱ ${l.duration}</span>
+      </div>
+      <div class="rp-field-label">Issue</div>
+      <div class="rp-field-value">${p.parsedIssue}</div>
+      <div class="rp-field-label">Fix Applied</div>
+      <div class="rp-field-value" style="margin-bottom:0">${p.parsedFix}</div>
+    </div>`;
+  }).join('');
+
+  return`<div class="rp-header">
+    <div class="rp-logo-area">
+      ${logoHTML}
+      <div><div class="rp-company">${company}</div>${tagline?`<div class="rp-company-sub">${tagline}</div>`:''}</div>
+    </div>
+    <div class="rp-doc-info">
+      <div class="rp-doc-title">IT Support Report</div>
+      <div class="rp-doc-date">${now.toLocaleDateString('en-GB',{day:'2-digit',month:'long',year:'numeric'})}</div>
+    </div>
+  </div>
+  <div class="rp-title">${title}</div>
+  <div class="rp-subtitle">${subtitle}</div>
+  <div class="rp-summary-grid">${summaryCards}</div>
+  <div class="rp-section">
+    <div class="rp-section-title">Issue Log</div>
+    ${issueCards||'<div style="color:#aaa;font-size:13px;padding:10px">No issues logged for this period.</div>'}
+  </div>
+  ${contact?`<div class="rp-section"><div class="rp-section-title">Contact</div><div style="font-size:13px;color:#555">${contact}</div></div>`:''}
+  <div class="rp-footer"><b>${company}</b> · ${footerNote}</div>`;
+}
+
+// ══════════════════════════════════
+//  OPEN REPORT MODALS
+// ══════════════════════════════════
+function openSingleReport(id){
+  const l=logs.find(x=>x.id===id);if(!l)return;
+  const d=new Date(l.timestamp);
+  currentReportData={type:'single',id};
+  document.getElementById('reportModalTitle').textContent=`Report — ${l.client}`;
+  document.getElementById('reportPreview').innerHTML=buildReportHTML(
+    l.client,
+    `Single Issue Report · ${d.toLocaleDateString('en-GB',{day:'2-digit',month:'long',year:'numeric'})}`,
+    [l], {}
+  );
+  document.getElementById('reportModal').classList.add('open');
+}
+
+function openClientReport(client){
+  const now=new Date();
+  const mName=now.toLocaleDateString('en-GB',{month:'long',year:'numeric'});
+  const ml=logs.filter(l=>{const d=new Date(l.timestamp);return l.client===client&&d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();});
+  currentReportData={type:'client',client};
+  document.getElementById('reportModalTitle').textContent=`Report — ${client}`;
+  document.getElementById('reportPreview').innerHTML=buildReportHTML(
+    client,
+    `Monthly IT Support Report · ${mName}`,
+    ml, {}
+  );
+  document.getElementById('reportModal').classList.add('open');
+}
+
+function openFullReport(){
+  const now=new Date();
+  const mName=now.toLocaleDateString('en-GB',{month:'long',year:'numeric'});
+  const ml=logs.filter(l=>{const d=new Date(l.timestamp);return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();});
+  currentReportData={type:'full'};
+  document.getElementById('reportModalTitle').textContent='Monthly IT Report';
+  document.getElementById('reportPreview').innerHTML=buildReportHTML(
+    'IT Support Summary',
+    `All Clients · ${mName}`,
+    ml, {}
+  );
+  document.getElementById('reportModal').classList.add('open');
+}
+
+function closeReportModal(e){if(!e||e.target===document.getElementById('reportModal'))document.getElementById('reportModal').classList.remove('open');}
+
+// ══════════════════════════════════
+//  PLAIN TEXT for copy/WhatsApp
+// ══════════════════════════════════
+function buildPlainText(l){
+  const d=new Date(l.timestamp);
+  const p={parsedUser:l.parsedUser||'Unknown',parsedIssue:l.parsedIssue||l.desc,parsedFix:l.parsedFix||'Resolved',parsedObject:l.parsedObject||''};
+  return`IT SUPPORT REPORT — ${tpl.companyName||'FixLog'}
+${'─'.repeat(38)}
+Date     : ${d.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}
+Time     : ${d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})}
+Client   : ${l.client}
+User     : ${p.parsedUser}
+${p.parsedObject?`Device   : ${p.parsedObject}\n`:''}Category : ${l.category} | ${l.severity} | ${l.duration}
+${'─'.repeat(38)}
+ISSUE: ${p.parsedIssue}
+FIX  : ${p.parsedFix}
+${'─'.repeat(38)}
+Full log: ${l.desc}
+${'─'.repeat(38)}
+${tpl.contact||''}`;
+}
+
+function copyReportText(){
+  const preview=document.getElementById('reportPreview');
+  const text=preview.innerText;
+  navigator.clipboard.writeText(text).then(()=>showToast('Report copied!'));
+}
+
+function shareReportWA(){
+  var title = document.getElementById('reportModalTitle').textContent || 'IT Report';
+  var reportHTML = document.getElementById('reportPreview').innerHTML;
+  shareReportAsFile(title, reportHTML);
+}
+
+
+// ── SHARE HELPERS ──────────────────────────────────────────
+// Uses Web Share API (native share sheet on Android/iOS) which includes WhatsApp.
+// Falls back to wa.me text link if Web Share API unavailable.
+
+function shareText(text){
+  if(navigator.share){
+    navigator.share({text: text})
+      .catch(function(e){ if(e.name!=='AbortError') fallbackShareText(text); });
+  } else {
+    fallbackShareText(text);
+  }
+}
+
+function fallbackShareText(text){
+  window.open('https://wa.me/?text='+encodeURIComponent(text),'_blank');
+}
+
+// Build a self-contained HTML report file with the same styling as the preview
+function buildReportFile(titleStr, reportBodyHTML){
+  var rpCSS = [
+    '*{box-sizing:border-box;margin:0;padding:0;}',
+    "body{font-family:'DM Sans',sans-serif;background:#f0f2f8;color:#1a1a2e;padding:24px;margin:0 auto;max-width:760px;}",
+    '.rp-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;padding-bottom:16px;border-bottom:2.5px solid #e0e2ef;background:#fff;padding:20px 24px;border-radius:12px 12px 0 0;}',
+    '.rp-logo-area{display:flex;align-items:center;gap:12px;}',
+    '.rp-logo-img{max-height:48px;max-width:140px;object-fit:contain;}',
+    '.rp-logo-img.show{display:block;}',
+    '.rp-company{font-size:16px;font-weight:700;color:#1a1a2e;}',
+    '.rp-company-sub{font-size:11px;color:#888;margin-top:2px;}',
+    '.rp-doc-info{text-align:right;}',
+    '.rp-doc-title{font-size:10px;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:1px;}',
+    '.rp-doc-date{font-size:13px;color:#1a1a2e;margin-top:2px;font-weight:600;}',
+    '.rp-title{font-size:21px;font-weight:700;color:#1a1a2e;margin:20px 0 4px;}',
+    '.rp-subtitle{font-size:12px;color:#888;margin-bottom:18px;}',
+    '.rp-summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px;}',
+    '.rp-summary-card{background:#fff;border:1px solid #e0e2ef;border-radius:10px;padding:14px;text-align:center;}',
+    '.rp-summary-num{font-size:24px;font-weight:700;color:#1a1a2e;}',
+    '.rp-summary-label{font-size:10px;color:#888;margin-top:3px;text-transform:uppercase;letter-spacing:.5px;}',
+    '.rp-section{margin-bottom:20px;}',
+    '.rp-section-title{font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #e0e2ef;}',
+    '.rp-issue-card{background:#fff;border:1px solid #e0e2ef;border-radius:9px;padding:14px;margin-bottom:10px;page-break-inside:avoid;}',
+    '.rp-issue-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;}',
+    '.rp-issue-num{font-size:11px;font-weight:700;color:#aaa;}',
+    '.rp-issue-date{font-size:10px;color:#aaa;}',
+    '.rp-issue-badges{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;}',
+    '.rp-badge{font-size:10px;padding:2px 9px;border-radius:10px;font-weight:600;}',
+    '.rp-badge.cat{background:#ede9ff;color:#6d28d9;}',
+    '.rp-badge.sev-Low{background:#d1fae5;color:#065f46;}',
+    '.rp-badge.sev-Medium{background:#fef3c7;color:#92400e;}',
+    '.rp-badge.sev-High{background:#fee2e2;color:#991b1b;}',
+    '.rp-badge.dur{background:#e0f7fa;color:#006064;}',
+    '.rp-badge.user{background:#e8f4fd;color:#1565c0;}',
+    '.rp-field-label{font-size:10px;color:#aaa;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;font-weight:700;}',
+    '.rp-field-value{font-size:13px;color:#2d2d4e;line-height:1.6;margin-bottom:9px;}',
+    '.rp-footer{text-align:center;padding-top:16px;border-top:1px solid #e0e2ef;font-size:10px;color:#bbb;margin-top:8px;}',
+    '.rp-footer b{color:#888;}'
+  ].join('\n');
+
+  var gfont = 'https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap';
+
+  return '<!DOCTYPE html><html><head>'
+    + '<meta charset="UTF-8">'
+    + '<meta name="viewport" content="width=device-width,initial-scale=1">'
+    + '<title>' + titleStr + '<\/title>'
+    + '<link href="' + gfont + '" rel="stylesheet">'
+    + '<style>' + rpCSS + '<\/style>'
+    + '<\/head><body>'
+    + reportBodyHTML
+    + '<\/body><\/html>';
+}
+
+// Share as a properly styled .html file via native share sheet
+function shareReportAsFile(titleStr, reportBodyHTML){
+  var filename = (titleStr||'report').replace(/[^a-z0-9]/gi,'_').toLowerCase()+'.html';
+  var fileContent = buildReportFile(titleStr, reportBodyHTML);
+  var blob = new Blob([fileContent], {type:'text/html'});
+  var file = new File([blob], filename, {type:'text/html'});
+
+  if(navigator.share && navigator.canShare && navigator.canShare({files:[file]})){
+    navigator.share({
+      title: titleStr,
+      files: [file]
+    }).catch(function(e){
+      if(e.name!=='AbortError') openReportInNewTab(fileContent);
+    });
+  } else if(navigator.share){
+    // Fallback: share plain text summary
+    navigator.share({title: titleStr, text: document.getElementById('reportPreview').innerText})
+      .catch(function(e){ if(e.name!=='AbortError') openReportInNewTab(fileContent); });
+  } else {
+    openReportInNewTab(fileContent);
+  }
+}
+
+// Desktop fallback: open styled report in new tab so user can print/save
+function openReportInNewTab(fileContent){
+  var w = window.open('','_blank');
+  if(w){ w.document.write(fileContent); w.document.close(); }
+}
+
+function shareWhatsAppGlobal(){
+  var now=new Date();
+  var mName=now.toLocaleDateString('en-GB',{month:'long',year:'numeric'});
+  var ml=logs.filter(function(l){var d=new Date(l.timestamp);return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();});
+  var titleStr='IT Support Report — '+mName+(tpl.companyName?' — '+tpl.companyName:'');
+  var reportHTML=buildReportHTML('IT Support Summary','All Clients · '+mName,ml,{});
+  shareReportAsFile(titleStr, reportHTML);
+}
+
+// ══════════════════════════════════
+//  PDF EXPORT — uses browser print
+// ══════════════════════════════════
+function exportPDF(){
+  var content = document.getElementById('reportPreview').innerHTML;
+  var company = tpl.companyName || 'FixLog';
+  var printWin = window.open('','_blank','width=820,height=1000');
+  if(!printWin){ showToast('Allow popups to export PDF'); return; }
+
+  var css = [
+    '*{box-sizing:border-box;margin:0;padding:0;}',
+    "body{font-family:'DM Sans',sans-serif;background:#fff;color:#1a1a2e;padding:32px;max-width:820px;margin:0 auto;}",
+    '.rp-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;padding-bottom:18px;border-bottom:2.5px solid #e8e8f0;}',
+    '.rp-logo-area{display:flex;align-items:center;gap:14px;}',
+    '.rp-logo-img{max-height:54px;max-width:160px;object-fit:contain;}',
+    '.rp-logo-img.show{display:block;}',
+    '.rp-company{font-size:17px;font-weight:700;color:#1a1a2e;}',
+    '.rp-company-sub{font-size:12px;color:#888;margin-top:2px;}',
+    '.rp-doc-info{text-align:right;}',
+    '.rp-doc-title{font-size:10px;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:1px;}',
+    '.rp-doc-date{font-size:13px;color:#1a1a2e;margin-top:3px;font-weight:600;}',
+    '.rp-title{font-size:22px;font-weight:700;color:#1a1a2e;margin-bottom:4px;}',
+    '.rp-subtitle{font-size:12px;color:#888;margin-bottom:22px;}',
+    '.rp-summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px;}',
+    '.rp-summary-card{background:#f8f9ff;border:1px solid #e8e8f0;border-radius:10px;padding:14px;text-align:center;}',
+    '.rp-summary-num{font-size:24px;font-weight:700;color:#1a1a2e;}',
+    '.rp-summary-label{font-size:10px;color:#888;margin-top:4px;text-transform:uppercase;letter-spacing:.5px;}',
+    '.rp-section{margin-bottom:22px;}',
+    '.rp-section-title{font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;padding-bottom:7px;border-bottom:1px solid #e8e8f0;}',
+    '.rp-issue-card{background:#f8f9ff;border:1px solid #e8e8f0;border-radius:9px;padding:14px;margin-bottom:10px;page-break-inside:avoid;}',
+    '.rp-issue-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:9px;}',
+    '.rp-issue-num{font-size:11px;font-weight:700;color:#aaa;}',
+    '.rp-issue-date{font-size:10px;color:#aaa;}',
+    '.rp-issue-badges{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;}',
+    '.rp-badge{font-size:10px;padding:2px 9px;border-radius:10px;font-weight:600;}',
+    '.rp-badge.cat{background:#ede9ff;color:#6d28d9;}',
+    '.rp-badge.sev-Low{background:#d1fae5;color:#065f46;}',
+    '.rp-badge.sev-Medium{background:#fef3c7;color:#92400e;}',
+    '.rp-badge.sev-High{background:#fee2e2;color:#991b1b;}',
+    '.rp-badge.dur{background:#e0f7fa;color:#006064;}',
+    '.rp-badge.user{background:#e8f4fd;color:#1565c0;}',
+    '.rp-field-label{font-size:10px;color:#aaa;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;font-weight:700;}',
+    '.rp-field-value{font-size:12px;color:#2d2d4e;line-height:1.6;margin-bottom:9px;}',
+    '.rp-footer{text-align:center;padding-top:18px;border-top:1px solid #e8e8f0;font-size:10px;color:#bbb;margin-top:8px;}',
+    '.rp-footer b{color:#888;}',
+    '@media print{body{padding:20px;}}'
+  ].join('\n');
+
+  var gfont = 'https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap';
+  var html_parts = [
+    '<!DOCTYPE html>',
+    '<html>',
+    '<head>',
+    '<meta charset="UTF-8">',
+    '<title>' + company + ' \u2014 IT Support Report<\/title>',
+    '<link href="' + gfont + '" rel="stylesheet">',
+    '<style>' + css + '<\/style>',
+    '<\/head>',
+    '<body>',
+    content,
+    '<\/body>',
+    '<\/html>'
+  ];
+
+  // Write page
+  printWin.document.open();
+  printWin.document.write(html_parts.join(''));
+  printWin.document.close();
+
+  // Auto-print after fonts load
+  printWin.onload = function(){ setTimeout(function(){ printWin.print(); }, 600); };
+  showToast('PDF print dialog opened');
+}
+
+// ══════════════════════════════════
+//  STATS
+// ══════════════════════════════════
+function renderStats(){
+  const now=new Date();
+  const ml=logs.filter(l=>{const d=new Date(l.timestamp);return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();});
+  const toMins=d=>({'5 min':5,'15 min':15,'30 min':30,'1 hour':60,'2+ hours':120,'—':0}[d]||0);
+  const mm=ml.reduce((s,l)=>s+toMins(l.duration),0);
+  const rp={};logs.forEach(l=>{const k=`${l.client}|${l.category}`;rp[k]=(rp[k]||[]);rp[k].push(l);});
+  const ri=Object.entries(rp).filter(([k,v])=>v.length>=3);
+  const cc={};logs.forEach(l=>cc[l.client]=(cc[l.client]||0)+1);
+  const top=Object.entries(cc).sort((a,b)=>b[1]-a[1])[0];
+  document.getElementById('statTotal').textContent=logs.length;
+  document.getElementById('statMonth').textContent=`This month: ${ml.length}`;
+  document.getElementById('statClients').textContent=Object.keys(cc).length;
+  document.getElementById('statTopClient').textContent=top?`Top: ${top[0]}`:'—';
+  const hrs=Math.floor(mm/60),mins=mm%60;
+  document.getElementById('statHours').textContent=hrs>0?`${hrs}h${mins>0?mins+'m':''}`:mm+'m';
+  document.getElementById('statRecurring').textContent=ri.length;
+  const catC={};logs.forEach(l=>catC[l.category]=(catC[l.category]||0)+1);
+  const maxC=Math.max(...Object.values(catC),1);
+  document.getElementById('catBars').innerHTML=Object.entries(catC).sort((a,b)=>b[1]-a[1]).slice(0,7).map(([k,v])=>`<div class="bar-row"><div class="bar-label">${k}</div><div class="bar-track"><div class="bar-fill" style="width:${(v/maxC*100).toFixed(0)}%"></div></div><div class="bar-count">${v}</div></div>`).join('');
+  const maxCl=Math.max(...Object.values(cc),1);
+  document.getElementById('clientBars').innerHTML=Object.entries(cc).sort((a,b)=>b[1]-a[1]).slice(0,7).map(([k,v])=>`<div class="bar-row"><div class="bar-label">${k}</div><div class="bar-track"><div class="bar-fill" style="width:${(v/maxCl*100).toFixed(0)}%;background:var(--purple)"></div></div><div class="bar-count">${v}</div></div>`).join('');
+  const rEl=document.getElementById('recurringList'),rT=document.getElementById('recurringTitle');
+  if(ri.length){rT.style.display='block';rEl.innerHTML=ri.map(([k,v])=>{const[cl,cat]=k.split('|');return`<div class="repeat-item"><div style="font-size:13px;font-weight:600;color:var(--warn)">${cl}</div><div style="font-size:12px;color:var(--t2);margin-top:3px">${cat}</div><div style="font-family:var(--mono);font-size:11px;color:var(--warn);margin-top:5px">⚠ ${v.length} times — consider root-cause fix</div></div>`;}).join('');}
+  else{rT.style.display='none';rEl.innerHTML='';}
+}
+
+// ══════════════════════════════════
+//  HELPERS
+// ══════════════════════════════════
+function updateTodayCount(){
+  const today=new Date().toDateString();
+  document.getElementById('todayCount').textContent=logs.filter(l=>new Date(l.timestamp).toDateString()===today).length;
+}
+function showToast(msg,dur=2500){
+  const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),dur);
+}
+function exportData(){
+  const data=JSON.stringify({logs,clients,categories,severities,durations,tpl},null,2);
+  const blob=new Blob([data],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='fixlog-backup.json';a.click();
+}
+
+
+// ── PWA Bootstrap ──────────────────────────────
+(function(){
+  // Manifest (blob URL — works for Add to Home Screen prompt and metadata)
+  var md = '{"name":"FixLog","short_name":"FixLog","description":"Voice-first IT support logger","start_url":"./index.html","display":"standalone","background_color":"#0a0a0f","theme_color":"#0a0a0f","orientation":"portrait","icons":[{"src":"data:image/png;base64,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","sizes":"192x192","type":"image/png","purpose":"any maskable"},{"src":"data:image/png;base64,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","sizes":"512x512","type":"image/png","purpose":"any maskable"}],"categories":["productivity","business","utilities"]}';
+  var mb = new Blob([md], {type:'application/json'});
+  var mu = URL.createObjectURL(mb);
+  var ml = document.createElement('link');
+  ml.rel = 'manifest'; ml.href = mu;
+  document.head.appendChild(ml);
+
+  // Service Worker — registers only when hosted on HTTPS, not from local file
+  if('serviceWorker' in navigator && location.protocol === 'https:'){
+    navigator.serviceWorker.register('./sw.js', {scope:'./'})
+      .then(function(){ console.log('[FixLog] SW ready — offline active'); })
+      .catch(function(){ /* sw.js optional — app still works */ });
+  }
+
+  // Install banner
+  var deferred = null;
+  window.addEventListener('beforeinstallprompt', function(e){
+    e.preventDefault();
+    deferred = e;
+    if(!window.matchMedia('(display-mode: standalone)').matches){
+      setTimeout(showInstallBanner, 3000);
+    }
+  });
+
+  function showInstallBanner(){
+    if(document.getElementById('fl-ib')) return;
+    var b = document.createElement('div');
+    b.id = 'fl-ib';
+    b.setAttribute('style',
+      'position:fixed;bottom:76px;left:50%;transform:translateX(-50%);' +
+      'background:#00e5ff;color:#000;padding:11px 20px;border-radius:30px;' +
+      'font-size:13px;font-weight:700;z-index:9999;display:flex;align-items:center;' +
+      'gap:10px;box-shadow:0 4px 20px rgba(0,229,255,.4);' +
+      'font-family:sans-serif;white-space:nowrap;cursor:pointer;'
+    );
+    var installSpan = document.createElement('span');
+    installSpan.textContent = 'Install FixLog on your phone';
+    var installBtn = document.createElement('span');
+    installBtn.textContent = 'Install';
+    installBtn.setAttribute('style','background:rgba(0,0,0,.15);padding:4px 12px;border-radius:20px;');
+    var closeBtn = document.createElement('span');
+    closeBtn.textContent = 'x';
+    closeBtn.setAttribute('style','padding:2px 6px;opacity:.6;');
+    closeBtn.addEventListener('click', function(ev){ ev.stopPropagation(); b.remove(); });
+    b.appendChild(installSpan);
+    b.appendChild(installBtn);
+    b.appendChild(closeBtn);
+    b.addEventListener('click', function(){
+      if(deferred){ deferred.prompt(); deferred.userChoice.then(function(){ deferred=null; b.remove(); }); }
+    });
+    document.body.appendChild(b);
+    setTimeout(function(){ if(b.parentElement) b.remove(); }, 10000);
+  }
+})();
+
+</script>
+</body>
+</html>
