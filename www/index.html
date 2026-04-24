@@ -740,11 +740,9 @@ function startDictate(){
 
   // Detect Capacitor native environment
   // Check multiple ways because isNativePlatform() may not exist in all versions
-  var isCapacitor = !!(
-    (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) ||
-    (window.Capacitor && window.Capacitor.platform && window.Capacitor.platform !== 'web') ||
-    (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.SpeechRecognition)
-  );
+  // Check for our custom Android JS bridge (injected by MainActivity.java)
+  // This is more reliable than checking Capacitor plugin registration
+  var isCapacitor = !!(window.AndroidSpeech);
   var isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
   // Show what environment we detected (helps debug)
@@ -790,116 +788,100 @@ function startDictate(){
 // Uses @capacitor-community/speech-recognition
 // API: requestPermission, start({language, maxResults, partialResults, popup})
 // Events: partialResults → {matches:[]}
+// ── ANDROID NATIVE SPEECH via JavascriptInterface ───────────────────────────
+// MainActivity.java injects window.AndroidSpeech with startListening/stopListening
+// Callbacks: onAndroidSpeechReady, onAndroidSpeechPartial, onAndroidSpeechResult,
+//            onAndroidSpeechError, onAndroidSpeechStopped
+
 function startCapacitorSR(ta){
-  var SR = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.SpeechRecognition;
-  if(!SR){
-    setStatus('Loading speech engine…','');
-    setTimeout(function(){ startCapacitorSR(ta); }, 800);
-    return;
-  }
-
-  // Always stop any previous session cleanly before starting new one
-  // This fixes the "nothing happens on 2nd tap" bug
-  SR.stop().catch(function(){}).finally(function(){
-    _doCapacitorSR(SR, ta);
-  });
-
-  // Fallback if finally not supported
-  if(!Promise.prototype.finally){
-    setTimeout(function(){ _doCapacitorSR(SR, ta); }, 300);
-  }
-}
-
-function _doCapacitorSR(SR, ta){
-  // Guard: user tapped stop
-  if(!isListening) return;
-
-  var accumulated = ta.value;
-
-  // Remove old listener
-  if(window._srPartialListener){
-    try{ window._srPartialListener.remove(); }catch(e){}
-    window._srPartialListener = null;
-  }
-
-  _dbgLog('Calling requestPermission...');
-  setStatus('Checking mic permission…','recording');
-
-  SR.requestPermission().then(function(result){
-    _dbgLog('Permission result: '+JSON.stringify(result));
-
-    // Handle all possible result shapes from different plugin versions
-    var perm = result && (result.permission || result.status || result);
-    var granted = perm === 'granted' || perm === true || perm === 1 || perm === 'authorized';
-
-    _dbgLog('Granted:'+granted+' perm:'+JSON.stringify(perm));
-
-    if(!granted){
-      isListening = false;
-      document.getElementById('dictateBtn').classList.remove('active');
-      document.getElementById('dictateBtnLabel').textContent = '🎤 Tap to Speak';
-      setStatus('Mic permission denied — open phone Settings and allow mic for this app','');
-      showMicDeniedGuide();
-      return;
-    }
-
-    document.getElementById('dictateBtnLabel').textContent = 'Listening… tap to stop';
-    setStatus('🔴 Listening — speak now','recording');
-
-    // Partial results listener
-    SR.addListener('partialResults', function(data){
-      if(!isListening) return;
-      _dbgLog('Partial:'+JSON.stringify(data));
-      var matches = data && (data.matches || data.value || []);
-      if(matches && matches.length > 0){
-        ta.value = (accumulated + matches[0]).trimStart();
-        ta.style.height = 'auto';
-        ta.style.height = Math.min(ta.scrollHeight, 280) + 'px';
-      }
-    }).then(function(h){
-      window._srPartialListener = h;
-      _dbgLog('Partial listener attached');
-    }).catch(function(e){ console.warn('[FixLog] Listener error:', e); });
-
-    _dbgLog('Calling SR.start()...');
-    SR.start({
-      language: 'en-US',
-      maxResults: 1,
-      partialResults: true,
-      popup: false
-    }).then(function(finalResult){
-      _dbgLog('SR resolved:'+JSON.stringify(finalResult));
-      var matches = finalResult && (finalResult.matches || finalResult.value || []);
-      if(matches && matches.length > 0 && matches[0]){
-        accumulated = (accumulated + matches[0] + ' ').trimStart();
-        ta.value = accumulated;
-        ta.style.height = 'auto';
-        ta.style.height = Math.min(ta.scrollHeight, 280) + 'px';
-      }
-      if(isListening){
-        setStatus('🟡 Keep speaking…','recording');
-        setTimeout(function(){
-          if(isListening) _doCapacitorSR(SR, ta);
-        }, 300);
-      }
-    }).catch(function(err){
-      _dbgLog('SR error:'+JSON.stringify(err));
-      if(isListening){
-        setStatus('Mic error — retrying…','recording');
-        setTimeout(function(){
-          if(isListening) _doCapacitorSR(SR, ta);
-        }, 800);
-      }
-    });
-
-  }).catch(function(err){
-    _dbgLog('Permission error:'+JSON.stringify(err));
+  // Check if the Android bridge is available
+  if(!window.AndroidSpeech){
+    _dbgLog('AndroidSpeech bridge not found - not in APK?');
+    setStatus('Speech bridge not available','');
     isListening = false;
     document.getElementById('dictateBtn').classList.remove('active');
     document.getElementById('dictateBtnLabel').textContent = '🎤 Tap to Speak';
-    setStatus('Mic error — try again','');
-  });
+    return;
+  }
+
+  _dbgLog('AndroidSpeech bridge found, starting...');
+  var accumulated = ta.value;
+
+  // Register callbacks BEFORE starting
+  window.onAndroidSpeechReady = function(){
+    _dbgLog('onReadyForSpeech - mic open');
+    document.getElementById('dictateBtnLabel').textContent = 'Listening… tap to stop';
+    setStatus('🔴 Listening — speak now','recording');
+  };
+
+  window.onAndroidSpeechPartial = function(text){
+    if(!isListening) return;
+    _dbgLog('Partial: ' + text);
+    ta.value = (accumulated + text).trimStart();
+    ta.style.height = 'auto';
+    ta.style.height = Math.min(ta.scrollHeight, 280) + 'px';
+  };
+
+  window.onAndroidSpeechResult = function(text){
+    _dbgLog('Final result: ' + text);
+    if(text && text.trim()){
+      accumulated = (accumulated + text + ' ').trimStart();
+      ta.value = accumulated;
+      ta.style.height = 'auto';
+      ta.style.height = Math.min(ta.scrollHeight, 280) + 'px';
+    }
+    // Auto restart for continuous listening
+    if(isListening){
+      setStatus('🟡 Keep speaking…','recording');
+      setTimeout(function(){
+        if(isListening && window.AndroidSpeech){
+          window.AndroidSpeech.startListening();
+        }
+      }, 300);
+    }
+  };
+
+  window.onAndroidSpeechError = function(code){
+    _dbgLog('Speech error code: ' + code);
+    // Error 7 = no match (silence), error 6 = no speech input - both are normal
+    // Just restart
+    if(isListening){
+      setTimeout(function(){
+        if(isListening && window.AndroidSpeech){
+          window.AndroidSpeech.startListening();
+        }
+      }, 500);
+    }
+  };
+
+  window.onAndroidSpeechStopped = function(){
+    _dbgLog('Speech stopped');
+    if(!isListening){
+      document.getElementById('dictateBtn').classList.remove('active');
+      document.getElementById('dictateBtnLabel').textContent = '🎤 Tap to Speak';
+      setStatus(
+        ta.value.trim() ? '✓ Done — tap Save to log this fix' : 'Tap to speak',
+        ta.value.trim() ? 'saved' : ''
+      );
+    }
+  };
+
+  // Start!
+  _dbgLog('Calling AndroidSpeech.startListening()');
+  setStatus('🔴 Starting mic…','recording');
+  try{
+    window.AndroidSpeech.startListening();
+  }catch(e){
+    _dbgLog('startListening error: ' + e);
+    isListening = false;
+    document.getElementById('dictateBtn').classList.remove('active');
+    document.getElementById('dictateBtnLabel').textContent = '🎤 Tap to Speak';
+    setStatus('Could not start mic — try again','');
+  }
 }
+
+// _doCapacitorSR kept as stub (not used anymore)
+function _doCapacitorSR(SR, ta){ startCapacitorSR(ta); }
 
 // ── DESKTOP: webkitSpeechRecognition ────────────────────────────────────────
 function doStartSR(ta, SR, accumulated, restartCount){
@@ -960,15 +942,12 @@ function doStartSR(ta, SR, accumulated, restartCount){
 function stopDictate(){
   isListening = false;
 
-  // Clean up Capacitor SR
-  var SR = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.SpeechRecognition;
-  if(SR){ try{ SR.stop(); }catch(e){} }
-  if(window._srPartialListener){
-    try{ window._srPartialListener.remove(); }catch(e){}
-    window._srPartialListener = null;
+  // Stop Android native SR
+  if(window.AndroidSpeech){
+    try{ window.AndroidSpeech.stopListening(); }catch(e){}
   }
 
-  // Clean up desktop SR
+  // Stop desktop SR
   if(recognition){
     recognition.onend = null;
     recognition.onerror = null;
