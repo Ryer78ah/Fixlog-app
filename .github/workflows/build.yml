@@ -47,7 +47,6 @@ jobs:
           DEST=$(find android/app/src -name "MainActivity.java" | head -1)
           echo "Copying to: $DEST"
           cp android_src/MainActivity.java "$DEST"
-          echo "=== MainActivity.java ==="
           cat "$DEST"
 
       - name: Make gradlew executable
@@ -56,7 +55,14 @@ jobs:
       - name: Build debug APK
         run: |
           cd android
-          ./gradlew assembleDebug --no-daemon 2>&1
+          ./gradlew assembleDebug --no-daemon 2>&1 || true
+
+      - name: Show Java compiler errors
+        run: |
+          echo "=== Finding error logs ==="
+          find android/app/build -name "*.log" 2>/dev/null | xargs grep -l "error:" 2>/dev/null | head -3 | xargs cat 2>/dev/null | head -80
+          echo "=== Rebuild with full output ==="
+          cd android && ./gradlew assembleDebug --no-daemon --info 2>&1 | grep -E "error:|warning:|cannot find|package" | head -40
 
       - name: Verify APK
         run: |
@@ -65,7 +71,7 @@ jobs:
             echo "SUCCESS"
             ls -lh "$APK"
           else
-            echo "FAILED"
+            echo "FAILED - no APK"
             exit 1
           fi
 
