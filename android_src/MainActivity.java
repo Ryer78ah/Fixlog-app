@@ -18,17 +18,16 @@ public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-    }
 
-    @Override
-    protected void onResume() {
-        super.onResume();
-        setupSpeechBridge();
-    }
-
-    private void setupSpeechBridge() {
-        WebView webView = getBridge().getWebView();
-        webView.addJavascriptInterface(new SpeechBridge(), "AndroidSpeech");
+        // Setup JS bridge after WebView is ready
+        getBridge().getWebView().post(new Runnable() {
+            @Override
+            public void run() {
+                getBridge().getWebView().addJavascriptInterface(
+                    new SpeechBridge(), "AndroidSpeech"
+                );
+            }
+        });
     }
 
     private class SpeechBridge {
@@ -38,9 +37,7 @@ public class MainActivity extends BridgeActivity {
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                    if (isListening) {
-                        stopSpeech();
-                    }
+                    if (isListening) stopSpeech();
                     startSpeech();
                 }
             });
@@ -65,6 +62,7 @@ public class MainActivity extends BridgeActivity {
     private void startSpeech() {
         if (speechRecognizer != null) {
             speechRecognizer.destroy();
+            speechRecognizer = null;
         }
 
         speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this);
@@ -73,7 +71,7 @@ public class MainActivity extends BridgeActivity {
             @Override
             public void onReadyForSpeech(Bundle params) {
                 isListening = true;
-                callJS("window.onAndroidSpeechReady()");
+                callJS("if(window.onAndroidSpeechReady)window.onAndroidSpeechReady()");
             }
 
             @Override
@@ -81,10 +79,8 @@ public class MainActivity extends BridgeActivity {
                 ArrayList<String> matches = partialResults
                     .getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
                 if (matches != null && !matches.isEmpty()) {
-                    String text = matches.get(0)
-                        .replace("'", "\\'")
-                        .replace("\"", "\\\"");
-                    callJS("window.onAndroidSpeechPartial('" + text + "')");
+                    String text = escapeJs(matches.get(0));
+                    callJS("if(window.onAndroidSpeechPartial)window.onAndroidSpeechPartial('" + text + "')");
                 }
             }
 
@@ -93,20 +89,14 @@ public class MainActivity extends BridgeActivity {
                 isListening = false;
                 ArrayList<String> matches = results
                     .getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
-                if (matches != null && !matches.isEmpty()) {
-                    String text = matches.get(0)
-                        .replace("'", "\\'")
-                        .replace("\"", "\\\"");
-                    callJS("window.onAndroidSpeechResult('" + text + "')");
-                } else {
-                    callJS("window.onAndroidSpeechResult('')");
-                }
+                String text = (matches != null && !matches.isEmpty()) ? escapeJs(matches.get(0)) : "";
+                callJS("if(window.onAndroidSpeechResult)window.onAndroidSpeechResult('" + text + "')");
             }
 
             @Override
             public void onError(int error) {
                 isListening = false;
-                callJS("window.onAndroidSpeechError(" + error + ")");
+                callJS("if(window.onAndroidSpeechError)window.onAndroidSpeechError(" + error + ")");
             }
 
             @Override public void onBeginningOfSpeech() {}
@@ -133,7 +123,15 @@ public class MainActivity extends BridgeActivity {
             speechRecognizer.destroy();
             speechRecognizer = null;
         }
-        callJS("window.onAndroidSpeechStopped()");
+        callJS("if(window.onAndroidSpeechStopped)window.onAndroidSpeechStopped()");
+    }
+
+    private String escapeJs(String text) {
+        return text.replace("\\", "\\\\")
+                   .replace("'", "\\'")
+                   .replace("\"", "\\\"")
+                   .replace("\n", "\\n")
+                   .replace("\r", "");
     }
 
     private void callJS(final String js) {
@@ -143,13 +141,5 @@ public class MainActivity extends BridgeActivity {
                 getBridge().getWebView().evaluateJavascript(js, null);
             }
         });
-    }
-
-    @Override
-    protected void onDestroy() {
-        if (speechRecognizer != null) {
-            speechRecognizer.destroy();
-        }
-        super.onDestroy();
     }
 }
