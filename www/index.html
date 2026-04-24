@@ -737,43 +737,65 @@ function toggleDictate(){
 
 function startDictate(){
   var ta = document.getElementById('issueDesc');
-
-  // Detect Capacitor native environment
-  // Check multiple ways because isNativePlatform() may not exist in all versions
-  // Check for our custom Android JS bridge (injected by MainActivity.java)
-  // This is more reliable than checking Capacitor plugin registration
-  var isCapacitor = !!(window.AndroidSpeech);
+  var isAndroidAPK = !!(window.AndroidVoice);
   var isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-  // Show what environment we detected (helps debug)
-  var _dbgMsg = 'isCapacitor:'+isCapacitor+' isMobile:'+isMobile+
-    ' Cap:'+!!window.Capacitor+
-    ' SR:'+!!(window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.SpeechRecognition)+
-    ' platform:'+(window.Capacitor&&window.Capacitor.platform||'none');
-  _dbgLog(_dbgMsg);
+  _dbgLog('startDictate: AndroidVoice='+isAndroidAPK+' mobile='+isMobile);
 
-  if(isCapacitor){
-    // ── NATIVE APK: Use Capacitor SpeechRecognition plugin ────────────────
-    // CRITICAL: set isListening=true BEFORE calling startCapacitorSR
-    // otherwise _doCapacitorSR returns immediately thinking user cancelled
+  if(isAndroidAPK){
+    // ── ANDROID APK: Use native voice input dialog ───────────────────────
+    // Opens Android's built-in Google voice input - same as Gmail/WhatsApp
+    // No permissions code needed - Android handles it automatically
+
     isListening = true;
     document.getElementById('dictateBtn').classList.add('active');
-    document.getElementById('dictateBtnLabel').textContent = 'Starting…';
-    setStatus('Requesting mic…', 'recording');
-    startCapacitorSR(ta);
+    document.getElementById('dictateBtnLabel').textContent = 'Listening…';
+    setStatus('🎤 Speak now — Android voice dialog opening','recording');
+
+    // Set up callback - called when user finishes speaking
+    window.onVoiceResult = function(text){
+      isListening = false;
+      document.getElementById('dictateBtn').classList.remove('active');
+      document.getElementById('dictateBtnLabel').textContent = '🎤 Tap to Speak';
+
+      if(text && text.trim()){
+        var existing = ta.value.trim();
+        ta.value = existing ? existing + ' ' + text.trim() : text.trim();
+        ta.style.height = 'auto';
+        ta.style.height = Math.min(ta.scrollHeight, 280) + 'px';
+        setStatus('✓ Done — tap Save to log this fix','saved');
+        _dbgLog('Voice result: ' + text);
+      } else {
+        setStatus('No speech detected — tap to try again','');
+        _dbgLog('Voice result: empty/cancelled');
+      }
+    };
+
+    // Open the voice dialog
+    try{
+      window.AndroidVoice.startVoiceInput();
+    } catch(e){
+      _dbgLog('AndroidVoice error: ' + e);
+      isListening = false;
+      document.getElementById('dictateBtn').classList.remove('active');
+      document.getElementById('dictateBtnLabel').textContent = '🎤 Tap to Speak';
+      setStatus('Voice error — try again','');
+    }
+
   } else if(isMobile){
-    // ── MOBILE BROWSER/PWA: keyboard mic ──────────────────────────────────
+    // ── MOBILE BROWSER: Keyboard mic ────────────────────────────────────
     ta.focus();
     setTimeout(function(){
       ta.scrollIntoView({behavior:'smooth', block:'center'});
     }, 300);
     showMobileVoiceGuide();
+
   } else {
-    // ── DESKTOP BROWSER: webkitSpeechRecognition ──────────────────────────
+    // ── DESKTOP BROWSER: webkitSpeechRecognition ─────────────────────────
     var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if(!SR){
       ta.focus();
-      setStatus('Type your notes or use your keyboard mic button','');
+      setStatus('Type your notes manually','');
       return;
     }
     isListening = true;
@@ -784,106 +806,25 @@ function startDictate(){
   }
 }
 
-// ── CAPACITOR NATIVE SPEECH ─────────────────────────────────────────────────
-// Uses @capacitor-community/speech-recognition
-// API: requestPermission, start({language, maxResults, partialResults, popup})
-// Events: partialResults → {matches:[]}
-// ── ANDROID NATIVE SPEECH via JavascriptInterface ───────────────────────────
-// MainActivity.java injects window.AndroidSpeech with startListening/stopListening
-// Callbacks: onAndroidSpeechReady, onAndroidSpeechPartial, onAndroidSpeechResult,
-//            onAndroidSpeechError, onAndroidSpeechStopped
-
-function startCapacitorSR(ta){
-  // Check if the Android bridge is available
-  if(!window.AndroidSpeech){
-    _dbgLog('AndroidSpeech bridge not found - not in APK?');
-    setStatus('Speech bridge not available','');
-    isListening = false;
-    document.getElementById('dictateBtn').classList.remove('active');
-    document.getElementById('dictateBtnLabel').textContent = '🎤 Tap to Speak';
-    return;
+function stopDictate(){
+  isListening = false;
+  // Clean up desktop SR if running
+  if(recognition){
+    recognition.onend = null;
+    recognition.onerror = null;
+    try{ recognition.abort(); }catch(e){}
+    recognition = null;
   }
-
-  _dbgLog('AndroidSpeech bridge found, starting...');
-  var accumulated = ta.value;
-
-  // Register callbacks BEFORE starting
-  window.onAndroidSpeechReady = function(){
-    _dbgLog('onReadyForSpeech - mic open');
-    document.getElementById('dictateBtnLabel').textContent = 'Listening… tap to stop';
-    setStatus('🔴 Listening — speak now','recording');
-  };
-
-  window.onAndroidSpeechPartial = function(text){
-    if(!isListening) return;
-    _dbgLog('Partial: ' + text);
-    ta.value = (accumulated + text).trimStart();
-    ta.style.height = 'auto';
-    ta.style.height = Math.min(ta.scrollHeight, 280) + 'px';
-  };
-
-  window.onAndroidSpeechResult = function(text){
-    _dbgLog('Final result: ' + text);
-    if(text && text.trim()){
-      accumulated = (accumulated + text + ' ').trimStart();
-      ta.value = accumulated;
-      ta.style.height = 'auto';
-      ta.style.height = Math.min(ta.scrollHeight, 280) + 'px';
-    }
-    // Auto restart for continuous listening
-    if(isListening){
-      setStatus('🟡 Keep speaking…','recording');
-      setTimeout(function(){
-        if(isListening && window.AndroidSpeech){
-          window.AndroidSpeech.startListening();
-        }
-      }, 300);
-    }
-  };
-
-  window.onAndroidSpeechError = function(code){
-    _dbgLog('Speech error code: ' + code);
-    // Error 7 = no match (silence), error 6 = no speech input - both are normal
-    // Just restart
-    if(isListening){
-      setTimeout(function(){
-        if(isListening && window.AndroidSpeech){
-          window.AndroidSpeech.startListening();
-        }
-      }, 500);
-    }
-  };
-
-  window.onAndroidSpeechStopped = function(){
-    _dbgLog('Speech stopped');
-    if(!isListening){
-      document.getElementById('dictateBtn').classList.remove('active');
-      document.getElementById('dictateBtnLabel').textContent = '🎤 Tap to Speak';
-      setStatus(
-        ta.value.trim() ? '✓ Done — tap Save to log this fix' : 'Tap to speak',
-        ta.value.trim() ? 'saved' : ''
-      );
-    }
-  };
-
-  // Start!
-  _dbgLog('Calling AndroidSpeech.startListening()');
-  setStatus('🔴 Starting mic…','recording');
-  try{
-    window.AndroidSpeech.startListening();
-  }catch(e){
-    _dbgLog('startListening error: ' + e);
-    isListening = false;
-    document.getElementById('dictateBtn').classList.remove('active');
-    document.getElementById('dictateBtnLabel').textContent = '🎤 Tap to Speak';
-    setStatus('Could not start mic — try again','');
-  }
+  document.getElementById('dictateBtn').classList.remove('active');
+  document.getElementById('dictateBtnLabel').textContent = '🎤 Tap to Speak';
+  var ta = document.getElementById('issueDesc');
+  setStatus(
+    ta.value.trim() ? '✓ Done — tap Save to log this fix' : 'Tap to speak',
+    ta.value.trim() ? 'saved' : ''
+  );
 }
 
-// _doCapacitorSR kept as stub (not used anymore)
-function _doCapacitorSR(SR, ta){ startCapacitorSR(ta); }
-
-// ── DESKTOP: webkitSpeechRecognition ────────────────────────────────────────
+// Desktop SR (unchanged - works fine on PC)
 function doStartSR(ta, SR, accumulated, restartCount){
   var rec = new SR();
   rec.continuous = false;
@@ -899,21 +840,21 @@ function doStartSR(ta, SR, accumulated, restartCount){
 
   rec.onresult = function(e){
     var interim = '';
-    for(var i = e.resultIndex; i < e.results.length; i++){
-      if(e.results[i].isFinal) accumulated += e.results[i][0].transcript + ' ';
+    for(var i=e.resultIndex;i<e.results.length;i++){
+      if(e.results[i].isFinal) accumulated += e.results[i][0].transcript+' ';
       else interim = e.results[i][0].transcript;
     }
-    ta.value = (accumulated + interim).trimStart();
+    ta.value = (accumulated+interim).trimStart();
     ta.style.height = 'auto';
-    ta.style.height = Math.min(ta.scrollHeight, 280) + 'px';
+    ta.style.height = Math.min(ta.scrollHeight, 280)+'px';
   };
 
   rec.onerror = function(e){
-    if(e.error === 'aborted' || e.error === 'no-speech') return;
-    if(e.error === 'not-allowed'){
+    if(e.error==='aborted'||e.error==='no-speech') return;
+    if(e.error==='not-allowed'){
       isListening = false;
       document.getElementById('dictateBtn').classList.remove('active');
-      document.getElementById('dictateBtnLabel').textContent = 'Tap to Speak';
+      document.getElementById('dictateBtnLabel').textContent = '🎤 Tap to Speak';
       setStatus('Mic blocked — check browser permissions','');
       showMicDeniedGuide();
     }
@@ -925,7 +866,7 @@ function doStartSR(ta, SR, accumulated, restartCount){
     setStatus('🟡 Keep speaking…','recording');
     setTimeout(function(){
       if(!isListening) return;
-      if(restartCount < 50) doStartSR(ta, SR, accumulated, restartCount + 1);
+      if(restartCount<50) doStartSR(ta, SR, accumulated, restartCount+1);
       else stopDictate();
     }, 300);
   };
@@ -934,124 +875,15 @@ function doStartSR(ta, SR, accumulated, restartCount){
   catch(ex){
     isListening = false;
     document.getElementById('dictateBtn').classList.remove('active');
-    document.getElementById('dictateBtnLabel').textContent = 'Tap to Speak';
+    document.getElementById('dictateBtnLabel').textContent = '🎤 Tap to Speak';
     setStatus('Could not start mic — try again','');
   }
 }
 
-function stopDictate(){
-  isListening = false;
+// Stub functions from old Capacitor approach (kept to avoid errors)
+function startCapacitorSR(ta){ startDictate(); }
+function _doCapacitorSR(SR, ta){ startDictate(); }
 
-  // Stop Android native SR
-  if(window.AndroidSpeech){
-    try{ window.AndroidSpeech.stopListening(); }catch(e){}
-  }
-
-  // Stop desktop SR
-  if(recognition){
-    recognition.onend = null;
-    recognition.onerror = null;
-    try{ recognition.abort(); }catch(e){}
-    recognition = null;
-  }
-
-  document.getElementById('dictateBtn').classList.remove('active');
-  document.getElementById('dictateBtnLabel').textContent = '🎤 Tap to Speak';
-  var ta = document.getElementById('issueDesc');
-  setStatus(
-    ta.value.trim() ? '✓ Done — tap Save to log this fix' : 'Tap to speak (desktop) or keyboard 🎤 (mobile)',
-    ta.value.trim() ? 'saved' : ''
-  );
-}
-
-function showMobileVoiceGuide(){
-  // Only show once — after that, just focus the textarea
-  if(localStorage.getItem('fl_voice_guide_seen')){
-    setStatus('Tap the 🎤 mic on your keyboard to speak','');
-    return;
-  }
-
-  var g = document.createElement('div');
-  g.id = 'mobileVoiceGuide';
-  g.setAttribute('style',
-    'position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:9999;'+
-    'display:flex;align-items:flex-end;justify-content:center;padding:20px;'
-  );
-  g.innerHTML =
-    '<div style="background:#111118;border:1px solid #2a2a3a;border-radius:16px;'+
-    'padding:24px;max-width:400px;width:100%;font-family:sans-serif;">'+
-    '<div style="font-size:36px;text-align:center;margin-bottom:14px;">⌨️🎤</div>'+
-    '<div style="font-size:17px;font-weight:700;color:#e8e8f0;margin-bottom:10px;text-align:center;">'+
-    'How to use voice on Android'+
-    '</div>'+
-    '<div style="font-size:13px;color:#8888aa;line-height:1.9;margin-bottom:20px;">'+
-    'Android restricts browser speech in apps. Use your keyboard mic instead — '+
-    'it&#39;s the same Google voice recognition and works perfectly.<br><br>'+
-    '<div style="background:#18181f;border-radius:10px;padding:14px;border:1px solid #2a2a3a;">'+
-    '<div style="color:#e8e8f0;font-weight:600;margin-bottom:8px;">3 steps:</div>'+
-    '<div style="margin-bottom:6px;">1️⃣ &nbsp;Tap the text box below</div>'+
-    '<div style="margin-bottom:6px;">2️⃣ &nbsp;Your keyboard opens — tap the <b style="color:#00e5ff">🎤 mic key</b></div>'+
-    '<div>3️⃣ &nbsp;Speak — text appears automatically</div>'+
-    '</div><br>'+
-    '<span style="color:#44445a;font-size:11px;">'+
-    'The mic key is usually bottom-left or bottom-right of your keyboard.'+
-    '</span>'+
-    '</div>'+
-    '<button onclick="closeMobileVoiceGuide()" '+
-    'style="width:100%;padding:13px;background:#00e5ff;color:#000;border:none;'+
-    'border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;">'+
-    'Got it — open text box'+
-    '</button>'+
-    '</div>';
-  document.body.appendChild(g);
-}
-
-function closeWhisperGuide(){ var g=document.getElementById('whisperGuide'); if(g)g.remove(); }
-
-function closeMobileVoiceGuide(){
-  localStorage.setItem('fl_voice_guide_seen','1');
-  var g = document.getElementById('mobileVoiceGuide');
-  if(g) g.remove();
-  // Focus the textarea after guide closes
-  setTimeout(function(){
-    var ta = document.getElementById('issueDesc');
-    ta.focus();
-    setStatus('Tap the 🎤 mic on your keyboard to speak','');
-    document.getElementById('dictateBtnLabel').textContent = 'Tap to Speak';
-  }, 100);
-}
-
-function showMicDeniedGuide(){
-  if(document.getElementById('micGuide')) return;
-  var g = document.createElement('div');
-  g.id = 'micGuide';
-  g.setAttribute('style',
-    'position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;'+
-    'display:flex;align-items:flex-end;justify-content:center;padding:20px;'
-  );
-  g.innerHTML =
-    '<div style="background:#111118;border:1px solid #2a2a3a;border-radius:16px;'+
-    'padding:24px;max-width:400px;width:100%;font-family:sans-serif;">'+
-    '<div style="font-size:32px;margin-bottom:12px;">🎤</div>'+
-    '<div style="font-size:16px;font-weight:700;color:#e8e8f0;margin-bottom:10px;">Mic Blocked</div>'+
-    '<div style="font-size:13px;color:#8888aa;line-height:1.7;margin-bottom:18px;">'+
-    '<b style="color:#e8e8f0">Quick fix in Chrome:</b><br>'+
-    '1. Tap the 🔒 lock icon in the address bar<br>'+
-    '2. Tap <b style="color:#00e5ff">Site settings</b><br>'+
-    '3. Tap <b style="color:#00e5ff">Microphone → Allow</b><br>'+
-    '4. Reload and try again'+
-    '</div>'+
-    '<button onclick="closeMicGuide()" '+
-    'style="width:100%;padding:13px;background:#00e5ff;color:#000;border:none;'+
-    'border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;">Got it</button>'+
-    '</div>';
-  document.body.appendChild(g);
-}
-
-function closeMicGuide(){
-  var g = document.getElementById('micGuide');
-  if(g) g.remove();
-}
 
 // ── DEBUG OVERLAY (tap mic 5x fast to show) ──────────────
 var _dbgTaps = 0, _dbgTimer = null;
